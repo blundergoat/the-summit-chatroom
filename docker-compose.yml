@@ -1,0 +1,190 @@
+# =============================================================================
+# Docker Compose — Orchestrates the entire Summit stack
+# =============================================================================
+#
+# This file defines all the services needed to run the application locally.
+# Run with: docker compose up
+#
+# SERVICES OVERVIEW:
+#
+#   ollama       — Local LLM server (like a local ChatGPT). Runs AI models on your machine.
+#   ollama-pull  — One-shot helper that downloads the AI model on first run, then exits.
+#   agent        — Python FastAPI app that wraps the LLM with persona-specific system prompts.
+#   app          — PHP Symfony web application (the chat UI and orchestration logic).
+#   mercure      — Real-time messaging hub for streaming tokens to the browser via SSE.
+#
+# STARTUP ORDER (enforced by depends_on):
+#
+#   1. ollama starts and becomes healthy
+#   2. ollama-pull downloads the model and exits
+#   3. agent starts (needs the model ready) and becomes healthy
+#   4. mercure starts
+#   5. app starts (needs both agent and mercure)
+#
+# DATA FLOW:
+#
+#   Browser ──(HTTP)──► app (PHP) ──(HTTP)──► agent (Python) ──(HTTP)──► ollama (LLM)
+#                         │                                                   │
+#                         │◄───────────────── response ──────────────────────│
+#                         │
+#                         ├──(publish)──► mercure ──(SSE)──► Browser (streaming mode)
+#
+# PORTS (accessible from your browser):
+#   http://localhost:8082  — The chat UI (PHP app)
+#   http://localhost:8081  — Python agent API (for debugging)
+#   http://localhost:11434 — Ollama API (for debugging)
+#   http://localhost:3100  — Mercure hub (for SSE subscriptions)
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # OLLAMA — Local LLM Server
+  # ===========================================================================
+  # Ollama runs AI models locally on your machine (CPU or GPU).
+  # It's like having ChatGPT running on localhost.
+  # The model files are stored in a Docker volume so they persist across restarts.
+  # See: https://ollama.com
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"       # Expose Ollama API for debugging (optional)
+    volumes:
+      - ollama_data:/root/.ollama   # Persist downloaded models across container restarts
+    healthcheck:
+      test: ["CMD", "ollama", "list"]   # Verify Ollama is running
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # OLLAMA-PULL — One-shot model downloader
+  # ===========================================================================
+  # Downloads the AI model on first run. This can take several minutes depending
+  # on the model size and your internet speed.
+  # After the download completes, this container exits and never runs again
+  # (restart: "no"). The model is stored in the ollama_data volume.
+  ollama-pull:
+    image: ollama/ollama
+    depends_on:
+      ollama:
+        condition: service_healthy   # Wait for Ollama to be ready before pulling
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:14b}"]  # Default model: qwen2.5:14b
+    environment:
+      - OLLAMA_HOST=http://ollama:11434   # Tell the CLI where the Ollama server is
+    restart: "no"   # Run once and exit — don't restart
+
+  # ===========================================================================
+  # AGENT — Python FastAPI Agent
+  # ===========================================================================
+  # The AI agent that receives questions and generates persona-specific responses.
+  # Built with the Strands Python SDK, exposed as an HTTP API.
+  #
+  # The agent receives:
+  #   - The user's message
+  #   - A "persona" metadata field (analyst, skeptic, or strategist)
+  #   - A session ID for conversation memory
+  #
+  # It then:
+  #   - Selects the appropriate system prompt for the persona
+  #   - Calls the LLM (Ollama or Bedrock) with the full conversation history
+  #   - Returns the response (or streams it token-by-token)
+  #
+  # Supports two model providers:
+  #   - "ollama" (default): Uses the local Ollama server (free, runs on your hardware)
+  #   - "bedrock": Uses AWS Bedrock (requires AWS credentials, uses cloud models)
+  agent:
+    build: ./strands_agents
+    ports:
+      - "8081:8000"       # Expose agent API for debugging (optional)
+    environment:
+      # --- Model provider selection ---
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-ollama}
+
+      # --- Ollama settings (used when MODEL_PROVIDER=ollama) ---
+      - OLLAMA_HOST=http://ollama:11434   # Docker internal hostname
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:14b}
+
+      # --- Bedrock settings (used when MODEL_PROVIDER=bedrock) ---
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-southeast-2}
+      - MODEL_ID=${MODEL_ID:-us.anthropic.claude-sonnet-4-20250514-v1:0}
+    depends_on:
+      ollama-pull:
+        condition: service_completed_successfully   # Wait for model download
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ===========================================================================
+  # APP — PHP Symfony Chat Application
+  # ===========================================================================
+  # The web application that serves the chat UI and orchestrates the summit.
+  # Built from the Dockerfile in the project root.
+  #
+  # The "additional_contexts" section lets Docker access the sibling strands-php-client
+  # directory during the build. This is needed because the PHP app depends on
+  # strands-php-client via a Composer path repository (for local development).
+  app:
+    build:
+      context: .                    # Build context is the project root
+      dockerfile: Dockerfile
+      additional_contexts:
+        strands-php-client: ../strands-php-client   # Sibling library needed by Composer
+    ports:
+      - "8082:8080"       # The chat UI — open http://localhost:8082 in your browser
+    environment:
+      - APP_ENV=dev                  # Symfony environment (dev = debug mode)
+      - APP_DEBUG=1                  # Enable Symfony debug toolbar
+      - APP_SECRET=the-summit-dev-secret-change-me   # CHANGE THIS in production!
+      - AGENT_ENDPOINT=http://agent:8000               # Python agent's Docker internal URL
+      - MERCURE_URL=http://mercure:3100/.well-known/mercure          # Internal Mercure URL (PHP -> Mercure)
+      - MERCURE_PUBLIC_URL=http://localhost:3100/.well-known/mercure  # Public Mercure URL (Browser -> Mercure)
+      - MERCURE_JWT_SECRET=${MERCURE_JWT_SECRET:-the-summit-mercure-dev-secret-key}  # Must be ≥ 32 chars for HS256
+    depends_on:
+      agent:
+        condition: service_healthy    # Wait for the Python agent to be ready
+      mercure:
+        condition: service_started    # Wait for Mercure to start
+
+  # ===========================================================================
+  # MERCURE — Real-time Messaging Hub
+  # ===========================================================================
+  # Mercure is a Server-Sent Events (SSE) hub. It acts as a relay:
+  #   - PHP publishes events to Mercure via HTTP POST
+  #   - Browsers subscribe to topics via EventSource (SSE)
+  #   - Mercure relays the events in real-time
+  #
+  # This enables the streaming mode where agent tokens appear word-by-word
+  # in the browser as they're generated by the LLM.
+  #
+  # CONFIGURATION:
+  #   MERCURE_PUBLISHER_JWT_KEY   — Secret for verifying publisher JWTs (must match app's MERCURE_JWT_SECRET)
+  #   MERCURE_SUBSCRIBER_JWT_KEY  — Secret for verifying subscriber JWTs
+  #   SERVER_NAME: ":3100"        — Listen on port 3100
+  #   anonymous                   — Allow anonymous subscribers (no JWT needed to read)
+  #   cors_origins                — Allow the PHP app's origin to connect (CORS)
+  #
+  # See: https://mercure.rocks
+  mercure:
+    image: dunglas/mercure
+    ports:
+      - "3100:3100"
+    environment:
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:-the-summit-mercure-dev-secret-key}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:-the-summit-mercure-dev-secret-key}
+      SERVER_NAME: ":3100"
+      MERCURE_EXTRA_DIRECTIVES: |
+        anonymous
+        cors_origins http://localhost:8082
+
+# =============================================================================
+# VOLUMES — Persistent data storage
+# =============================================================================
+# ollama_data stores downloaded AI models so they don't need to be
+# re-downloaded every time you run docker compose up.
+volumes:
+  ollama_data:

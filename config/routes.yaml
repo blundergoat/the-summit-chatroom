@@ -1,0 +1,20 @@
+# =============================================================================
+# Route Configuration
+# =============================================================================
+#
+# This file tells Symfony where to find route definitions.
+#
+# Instead of defining routes here manually, we use PHP attributes on controller
+# methods (e.g., #[Route('/', name: 'chat')]). This "type: attribute" setting
+# tells Symfony to scan all classes in src/Controller/ for #[Route] attributes.
+#
+# See ChatController.php for the actual route definitions:
+#   GET  /      - Renders the chat UI
+#   POST /chat  - Handles user messages (sync or streaming)
+# =============================================================================
+
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute

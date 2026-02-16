@@ -1,0 +1,45 @@
+# PHP
+vendor/
+var/
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+.phpstan-cache/
+coverage-html/
+coverage.xml
+.infection/
+infection.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+strands_agents/**/.venv/
+
+# Environment
+# .env is ignored because Docker Compose reads it and users customize it
+# (e.g. Bedrock credentials). Use .env.example as the template.
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+backend.hcl
+crash.log

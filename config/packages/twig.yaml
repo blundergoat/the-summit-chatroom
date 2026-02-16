@@ -1,0 +1,15 @@
+# =============================================================================
+# Twig Template Engine Configuration
+# =============================================================================
+#
+# Twig is the template engine Symfony uses to render HTML.
+#
+#   default_path - Where Twig looks for template files.
+#                  %kernel.project_dir% resolves to the project root directory.
+#                  So templates live in: the-summit-chatroom/templates/
+#
+# The chat UI template is at templates/chatroom.html.twig
+# =============================================================================
+
+twig:
+    default_path: '%kernel.project_dir%/templates'

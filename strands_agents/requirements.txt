@@ -1,0 +1,25 @@
+# =============================================================================
+# Python Dependencies for The Summit Agent
+# =============================================================================
+#
+# strands-agents[ollama] — The Strands AI SDK with Ollama model support.
+#                          This is the core library that provides the Agent class,
+#                          model integrations (Ollama, Bedrock), and streaming.
+#                          The [ollama] extra installs the Ollama-specific dependencies.
+#
+# fastapi                — Modern Python web framework for building APIs.
+#                          Provides automatic request validation (via Pydantic),
+#                          OpenAPI documentation, and async support.
+#
+# uvicorn[standard]      — ASGI server that runs the FastAPI application.
+#                          The [standard] extra adds uvloop and httptools for performance.
+#                          Think of it as the equivalent of PHP's built-in server or Nginx.
+#
+# pydantic               — Data validation library used by FastAPI for request/response models.
+#                          Defines the shape of JSON payloads (InvokeRequest, InvokeResponse, etc.)
+# =============================================================================
+
+strands-agents[ollama]>=1.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.0.0

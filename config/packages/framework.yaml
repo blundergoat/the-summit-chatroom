@@ -1,0 +1,33 @@
+# =============================================================================
+# Symfony Framework Configuration
+# =============================================================================
+#
+# Core framework settings. Most features are left at their defaults.
+#
+#   secret     - A random string used for CSRF tokens, cookie signing, and other
+#                security-related operations. Set via APP_SECRET env var.
+#                IMPORTANT: Change this in production!
+#
+#   router.utf8 - Enable UTF-8 route matching (recommended for modern apps)
+#
+# PARAMETERS:
+#
+#   mercure_url - A custom parameter that resolves the public Mercure URL.
+#                 Uses MERCURE_PUBLIC_URL env var if set and non-empty,
+#                 otherwise falls back to '' (empty string = streaming disabled).
+#                 This is passed to the Twig template so the browser knows where
+#                 to connect for SSE streaming.
+# =============================================================================
+
+framework:
+    secret: '%env(APP_SECRET)%'
+    router:
+        utf8: true
+
+parameters:
+    # Fallback value for mercure_url when MERCURE_PUBLIC_URL is not set or empty.
+    # The env(default:X:Y) processor requires a non-empty parameter name as the
+    # fallback source - using "default::" with an empty key causes
+    # "Key cannot be empty" at runtime.
+    mercure_url_default: ''
+    mercure_url: '%env(default:mercure_url_default:MERCURE_PUBLIC_URL)%'

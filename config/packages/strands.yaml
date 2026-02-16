@@ -1,0 +1,38 @@
+# =============================================================================
+# Strands Agent Configuration
+# =============================================================================
+#
+# This file configures a single StrandsClient instance shared by all summit
+# personas. The StrandsBundle reads this and registers it as a named service
+# in the DI container: "strands.client.summit".
+#
+# The orchestrators use this one client for all persona requests. The persona
+# name is sent as metadata in each request, and the Python agent uses it to
+# select the appropriate system prompt.
+#
+# CONFIGURATION OPTIONS:
+#
+#   endpoint - The HTTP URL of the Python agent (running in Docker via docker-compose.yml)
+#              The %env(AGENT_ENDPOINT)% syntax reads from the AGENT_ENDPOINT environment
+#              variable (set in docker-compose.yml as http://agent:8000)
+#
+#   timeout         - Overall max seconds for the request (default: 120).
+#                     300 seconds (5 minutes) is generous because LLM responses can be slow,
+#                     especially with large Ollama models on CPU.
+#
+#   connect_timeout - Idle timeout: max seconds to wait for first byte / between chunks
+#                     (default: 10). Must be high for sync mode since the agent calls
+#                     Bedrock 3 times before responding.
+#
+#   auth.driver     - Authentication method for the agent endpoint:
+#                     "null" - No authentication (supported by the current client version)
+# =============================================================================
+
+strands:
+    agents:
+        summit:
+            endpoint: '%env(AGENT_ENDPOINT)%'
+            timeout: 300
+            connect_timeout: 300
+            auth:
+                driver: 'null'

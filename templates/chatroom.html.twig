@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Summit</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+    {# Apply theme before first paint to prevent flash #}
+    <script>
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('summit_theme') || 'dark');
+    </script>
+
+    {# Google Fonts — Inter (body) + JetBrains Mono (code) #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    {# Tailwind CSS via CDN #}
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sidebar: 'var(--c-sidebar)',
+                        'sidebar-hover': 'var(--c-sidebar-hover)',
+                        chatbg: 'var(--c-chatbg)',
+                        inputbg: 'var(--c-inputbg)',
+                        'input-border': 'var(--c-input-border)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+
+        /* ===== DARK THEME (default) ===== */
+        :root, [data-theme="dark"] {
+            --c-sidebar: #1e1f22;
+            --c-sidebar-hover: #2b2d31;
+            --c-chatbg: #313338;
+            --c-inputbg: #383a40;
+            --c-input-border: #1e1f22;
+            --c-text-primary: #dbdee1;
+            --c-text-secondary: #b5bac1;
+            --c-text-muted: #949ba4;
+            --c-text-faint: #6d6f78;
+            --c-border: rgba(0,0,0,0.2);
+            --c-sidebar-border: rgba(0,0,0,0.3);
+            --c-msg-hover: rgba(0,0,0,0.06);
+            --c-user-bar: rgba(0,0,0,0.2);
+            --c-status-ring: #1e1f22;
+            --c-scrollbar: rgba(255,255,255,0.1);
+            --c-scrollbar-hover: rgba(255,255,255,0.2);
+            --c-code-bg: rgba(0,0,0,0.3);
+            --c-table-border: #4e5058;
+            --c-table-header: rgba(255,255,255,0.06);
+            --c-divider: #3f4147;
+            --c-input-focus: #6d6f78;
+            --c-user-accent: #818cf8;
+            --c-avatar-hover: rgba(255,255,255,0.15);
+            --c-tooltip-bg: #111214;
+            --c-tooltip-text: #dbdee1;
+            --c-tooltip-shadow: rgba(0,0,0,0.4);
+        }
+
+        /* ===== LIGHT THEME ===== */
+        [data-theme="light"] {
+            --c-sidebar: #f2f3f5;
+            --c-sidebar-hover: #e3e5e8;
+            --c-chatbg: #ffffff;
+            --c-inputbg: #ebedef;
+            --c-input-border: #e0e1e5;
+            --c-text-primary: #313338;
+            --c-text-secondary: #4e5058;
+            --c-text-muted: #5c6470;
+            --c-text-faint: #80848e;
+            --c-border: #e3e5e8;
+            --c-sidebar-border: #d9dce1;
+            --c-msg-hover: rgba(106,116,128,0.06);
+            --c-user-bar: rgba(0,0,0,0.04);
+            --c-status-ring: #f2f3f5;
+            --c-scrollbar: rgba(0,0,0,0.15);
+            --c-scrollbar-hover: rgba(0,0,0,0.25);
+            --c-code-bg: rgba(0,0,0,0.05);
+            --c-table-border: #e3e5e8;
+            --c-table-header: rgba(0,0,0,0.03);
+            --c-divider: #e3e5e8;
+            --c-input-focus: #b5bac1;
+            --c-user-accent: #4f46e5;
+            --c-avatar-hover: rgba(0,0,0,0.1);
+            --c-tooltip-bg: #ffffff;
+            --c-tooltip-text: #313338;
+            --c-tooltip-shadow: rgba(0,0,0,0.15);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--c-scrollbar); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--c-scrollbar-hover); }
+
+        /* Markdown inside messages */
+        .markdown-content h2 { font-weight: 700; font-size: 1.125rem; margin-top: 0.5rem; }
+        .markdown-content p { margin: 0.25rem 0; }
+        .markdown-content ul, .markdown-content ol { margin-left: 1.25rem; list-style: disc; }
+        .markdown-content ol { list-style: decimal; }
+        .markdown-content table { border-collapse: collapse; margin: 0.5rem 0; font-size: 0.9rem; }
+        .markdown-content th, .markdown-content td { border: 1px solid var(--c-table-border); padding: 0.25rem 0.5rem; }
+        .markdown-content th { background: var(--c-table-header); font-weight: 600; }
+        .markdown-content strong { font-weight: 700; }
+        .markdown-content code { background: var(--c-code-bg); padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.85em; font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace; }
+
+        /* Typing indicator */
+        .typing-dots { display: inline-flex; gap: 4px; align-items: center; height: 1.2em; padding: 4px 0; }
+        .typing-dots span {
+            width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.4;
+            animation: typing-bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing-bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Message hover highlight */
+        .msg-row:hover { background: var(--c-msg-hover); }
+
+        /* Online status dot */
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            border: 2px solid var(--c-status-ring);
+            position: absolute; bottom: -1px; right: -1px;
+        }
+
+        /* Avatar ring on hover */
+        .persona-item:hover .avatar-ring { box-shadow: 0 0 0 2px var(--c-avatar-hover); }
+
+        /* Custom tooltip (positioned via JS to escape overflow containers) */
+        #tooltip {
+            position: fixed;
+            background: var(--c-tooltip-bg);
+            color: var(--c-tooltip-text);
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.4;
+            padding: 6px 10px;
+            border-radius: 6px;
+            max-width: 260px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            transform: translateX(-4px);
+            box-shadow: 0 2px 8px var(--c-tooltip-shadow);
+            z-index: 999;
+        }
+        #tooltip.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #tooltip-arrow {
+            position: fixed;
+            width: 0; height: 0;
+            border: 5px solid transparent;
+            border-right-color: var(--c-tooltip-bg);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 999;
+        }
+        #tooltip-arrow.visible { opacity: 1; }
+
+        /* Slide-in animation for new messages */
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg-row { animation: msg-in 0.2s ease-out; }
+
+        /* Input placeholder */
+        #messageInput::placeholder { color: var(--c-text-faint); }
+
+        /* Input form focus */
+        .input-form:focus-within { border-color: var(--c-input-focus) !important; }
+
+        /* Send button hover */
+        #sendButton:hover:not(:disabled) { color: var(--c-text-primary) !important; }
+
+        /* Theme toggle */
+        .theme-toggle { transition: transform 0.3s ease; }
+        .theme-toggle:hover { transform: scale(1.15); }
+        .theme-toggle:active { transform: scale(0.95); }
+    </style>
+</head>
+
+<body class="bg-chatbg h-screen overflow-hidden flex">
+
+    {# SIDEBAR #}
+    <aside id="personaSidebar" class="w-72 bg-sidebar flex flex-col flex-shrink-0">
+
+        {# Sidebar header #}
+        <div class="h-12 px-4 flex items-center gap-2.5 shadow-sm" style="border-bottom: 1px solid var(--c-sidebar-border)">
+            <img src="/images/blundergoat-avatar.jpg" alt="Blunder Goat" class="w-7 h-7 rounded-full ring-2 ring-orange-500/40 flex-shrink-0">
+            <h1 class="font-bold text-base tracking-wide truncate" style="color: var(--c-text-primary)">The Summit</h1>
+        </div>
+
+        {# Channel / room name #}
+        <div class="px-3 pt-4 pb-2">
+            <button onclick="newChat()" data-tip="Random new chat" data-tip-position="bottom"
+                    class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[15px] hover:bg-sidebar-hover transition-colors group"
+                    style="color: var(--c-text-secondary)">
+                <span style="color: var(--c-text-muted)">#</span>
+                <span class="truncate">group-chat</span>
+                <span class="ml-auto text-4xl opacity-60 group-hover:opacity-100 transition-all group-hover:rotate-180 duration-300">🎲</span>
+            </button>
+        </div>
+
+        {# Online personas #}
+        <div class="px-3 mt-2 flex-1 overflow-y-auto">
+            <h2 class="text-xs font-semibold uppercase tracking-wider px-1 mb-2" style="color: var(--c-text-faint)">
+                Online — <span id="onlineCount">3</span>
+            </h2>
+            <div id="sidebarPersonas" class="space-y-0.5"></div>
+
+            <h2 class="text-xs font-semibold uppercase tracking-wider px-1 mb-2 mt-5" style="color: var(--c-text-faint)">
+                Offline — <span id="offlineCount">7</span>
+            </h2>
+            <div id="sidebarOffline" class="space-y-0.5"></div>
+        </div>
+
+        {# Sidebar footer — user bar #}
+        <div class="h-[52px] px-2 flex items-center gap-2 mt-auto" style="background: var(--c-user-bar)">
+            <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[15px] font-bold">Y</div>
+            <div class="flex-1 min-w-0">
+                <div class="text-[15px] font-medium truncate" style="color: var(--c-text-primary)">You</div>
+                <div class="text-xs truncate" style="color: var(--c-text-muted)">Online</div>
+            </div>
+        </div>
+    </aside>
+
+    {# MAIN CHAT AREA #}
+    <div class="flex-1 flex flex-col min-w-0">
+
+        {# Chat header #}
+        <header class="h-12 bg-chatbg px-4 flex items-center gap-3 flex-shrink-0 shadow-sm" style="border-bottom: 1px solid var(--c-border)">
+            <span class="text-lg" style="color: var(--c-text-muted)">#</span>
+            <h2 class="font-bold text-base" style="color: var(--c-text-primary)">group-chat</h2>
+            <div class="w-px h-5 mx-1" style="background: var(--c-divider)"></div>
+            <p class="text-[15px] truncate flex-1" style="color: var(--c-text-muted)">Three random characters debate your question</p>
+
+            {# Theme toggle #}
+            <button onclick="toggleTheme()" class="theme-toggle p-1.5 rounded-md hover:bg-sidebar-hover" title="Toggle light/dark mode" style="color: var(--c-text-muted)">
+                <svg id="themeIconSun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                </svg>
+                <svg id="themeIconMoon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+                </svg>
+            </button>
+        </header>
+
+        {# Messages #}
+        <main class="flex-1 overflow-y-auto" id="chatMessages">
+            <div class="pl-4 pr-4 xl:max-w-[85%] py-2 space-y-0" id="messageContainer">
+            </div>
+            {# Spacer so last message isn't flush against input #}
+            <div class="h-6"></div>
+        </main>
+
+        {# Typing / thinking indicator #}
+        <div id="thinkingState" class="hidden pl-4 pr-4 pb-0">
+            <div class="flex items-center gap-2 text-[15px] px-[72px]" style="color: var(--c-text-muted)">
+                <span class="typing-dots" style="color: var(--c-text-secondary)"><span></span><span></span><span></span></span>
+                <span id="thinkingLabel">The summit is deliberating...</span>
+                <span class="text-xs" style="color: var(--c-text-faint)" id="thinkingTimer"></span>
+            </div>
+        </div>
+
+        {# INPUT AREA #}
+        <footer class="px-4 pt-0 pb-6">
+            <form onsubmit="sendMessage(event)"
+                  class="input-form bg-inputbg rounded-lg flex items-end border border-input-border transition-colors">
+                <input
+                    type="text"
+                    id="messageInput"
+                    placeholder="Message #group-chat"
+                    class="flex-1 bg-transparent px-4 py-3 text-base focus:outline-none"
+                    style="color: var(--c-text-primary)"
+                    autocomplete="off"
+                />
+                <button
+                    type="submit"
+                    id="sendButton"
+                    class="px-3 py-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    style="color: var(--c-text-muted)"
+                    title="Send message"
+                >
+                    <svg class="w-5 h-5 rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                    </svg>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    {# Tooltip element (positioned via JS) #}
+    <div id="tooltip-arrow"></div>
+    <div id="tooltip"></div>
+
+    <script>
+        // =====================================================================
+        // TOOLTIP
+        // =====================================================================
+        const tooltipEl = document.getElementById('tooltip');
+        const tooltipArrow = document.getElementById('tooltip-arrow');
+        let tooltipTimeout;
+
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('[data-tip]');
+            if (!target) return;
+
+            clearTimeout(tooltipTimeout);
+            const rect = target.getBoundingClientRect();
+            const tip = target.getAttribute('data-tip');
+            const position = target.getAttribute('data-tip-position') || 'right';
+            tooltipEl.textContent = tip;
+
+            if (position === 'bottom') {
+                const centerX = rect.left + rect.width / 2;
+                const topY = rect.bottom + 10;
+                tooltipEl.style.left = centerX + 'px';
+                tooltipEl.style.top = topY + 'px';
+                tooltipEl.style.transform = 'translateX(-50%) translateY(-4px)';
+
+                tooltipArrow.style.left = (centerX - 5) + 'px';
+                tooltipArrow.style.top = (rect.bottom) + 'px';
+                tooltipArrow.style.borderRightColor = 'transparent';
+                tooltipArrow.style.borderBottomColor = 'var(--c-tooltip-bg)';
+
+                requestAnimationFrame(() => {
+                    tooltipEl.classList.add('visible');
+                    tooltipEl.style.transform = 'translateX(-50%) translateY(0)';
+                    tooltipArrow.classList.add('visible');
+                });
+            } else {
+                const left = rect.right + 10;
+                const top = rect.top + rect.height / 2;
+                tooltipEl.style.left = left + 'px';
+                tooltipEl.style.top = top + 'px';
+                tooltipEl.style.transform = 'translateY(-50%) translateX(-4px)';
+
+                tooltipArrow.style.left = (rect.right) + 'px';
+                tooltipArrow.style.top = (top - 5) + 'px';
+                tooltipArrow.style.borderBottomColor = 'transparent';
+                tooltipArrow.style.borderRightColor = 'var(--c-tooltip-bg)';
+
+                requestAnimationFrame(() => {
+                    tooltipEl.classList.add('visible');
+                    tooltipEl.style.transform = 'translateY(-50%) translateX(0)';
+                    tooltipArrow.classList.add('visible');
+                });
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('[data-tip]');
+            if (!target) return;
+
+            tooltipEl.classList.remove('visible');
+            tooltipArrow.classList.remove('visible');
+        });
+
+        // =====================================================================
+        // THEME TOGGLE
+        // =====================================================================
+        function applyThemeIcons() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            document.getElementById('themeIconSun').classList.toggle('hidden', theme === 'dark');
+            document.getElementById('themeIconMoon').classList.toggle('hidden', theme === 'light');
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('summit_theme', next);
+            applyThemeIcons();
+        }
+
+        applyThemeIcons();
+
+        // =====================================================================
+        // PERSONA ROSTER (10 characters)
+        // =====================================================================
+        const ALL_PERSONAS = {
+            angry_chef:           { label: 'Angry Chef',           icon: '\ud83d\udc68\u200d\ud83c\udf73', borderColor: '#ef4444', bgColor: '#fef2f2', textColor: '#991b1b', badgeBg: '#fee2e2', badgeText: '#b91c1c', tip: 'Explosive kitchen metaphors. Everything is raw or overcooked.' },
+            medieval_knight:      { label: 'Medieval Knight',      icon: '\u2694\ufe0f',     borderColor: '#78716c', bgColor: '#fafaf9', textColor: '#44403c', badgeBg: '#f5f5f4', badgeText: '#57534e', tip: 'Speaks in old English. Sees every problem as a quest.' },
+            gandalf:              { label: 'Gandalf',              icon: '\ud83e\uddd9',     borderColor: '#a855f7', bgColor: '#faf5ff', textColor: '#6b21a8', badgeBg: '#f3e8ff', badgeText: '#7e22ce', tip: 'Cryptic wisdom and dramatic warnings. Arrives precisely when he means to.' },
+            your_nan:             { label: 'Your Nan',             icon: '\ud83d\udc75',     borderColor: '#ec4899', bgColor: '#fdf2f8', textColor: '#9d174d', badgeBg: '#fce7f3', badgeText: '#be185d', tip: 'Worries if you\'ve eaten. Relates everything to 1974.' },
+            terminator:           { label: 'Terminator',           icon: '\ud83e\udd16',     borderColor: '#71717a', bgColor: '#fafafa', textColor: '#3f3f46', badgeBg: '#f4f4f5', badgeText: '#52525b', tip: 'Cold, logical, robotic. Calculates threat probabilities.' },
+            film_noir_detective:  { label: 'Noir Detective',       icon: '\ud83d\udd75\ufe0f',     borderColor: '#64748b', bgColor: '#f8fafc', textColor: '#334155', badgeBg: '#f1f5f9', badgeText: '#475569', tip: 'Hardboiled 1940s cynic. Every problem is a case to crack.' },
+            kindergarten_teacher: { label: 'Kindergarten Teacher', icon: '\u2b50',           borderColor: '#eab308', bgColor: '#fefce8', textColor: '#854d0e', badgeBg: '#fef9c3', badgeText: '#a16207', tip: 'VERY excited about everything. Gold stars for good ideas!' },
+            roman_emperor:        { label: 'Roman Emperor',        icon: '\ud83c\udfdb\ufe0f',     borderColor: '#f59e0b', bgColor: '#fffbeb', textColor: '#92400e', badgeBg: '#fef3c7', badgeText: '#b45309', tip: 'Imperial authority. Quotes Marcus Aurelius, threatens the Colosseum.' },
+            infomercial_host:     { label: 'Infomercial Host',     icon: '\ud83d\udcfa',     borderColor: '#f97316', bgColor: '#fff7ed', textColor: '#9a3412', badgeBg: '#ffedd5', badgeText: '#c2410c', tip: 'Everything is the GREATEST thing EVER. But wait, there\'s more!' },
+            ships_cat:            { label: "Ship's Cat",           icon: '\ud83d\udc31',     borderColor: '#14b8a6', bgColor: '#f0fdfa', textColor: '#134e4a', badgeBg: '#ccfbf1', badgeText: '#0f766e', tip: 'Judges humans from a cat\'s perspective. Would rather be napping.' },
+        };
+
+        // =====================================================================
+        // "WOULD YOU RATHER" STARTER QUESTIONS
+        // =====================================================================
+        const STARTER_QUESTIONS = [
+            // Classic Dilemmas
+            "Would you rather have the ability to fly or be invisible?",
+            "Would you rather live in the past or the future?",
+            "Would you rather always be 10 minutes late or 20 minutes early?",
+            "Would you rather have unlimited money or unlimited time?",
+            "Would you rather fight one horse-sized duck or 100 duck-sized horses?",
+            "Would you rather never use social media again or never watch a movie again?",
+            "Would you rather be able to talk to animals or speak every human language?",
+            "Would you rather live without music or without TV?",
+            "Would you rather be the funniest person in the room or the smartest?",
+            "Would you rather have a rewind button or a pause button for your life?",
+            "Would you rather always have to sing instead of speak or dance everywhere you go?",
+            "Would you rather live in a treehouse or a houseboat?",
+            "Would you rather know the history of every object you touched or be able to talk to animals?",
+            "Would you rather have a personal chef or a personal driver?",
+            "Would you rather be famous for something embarrassing or never be famous at all?",
+            "Would you rather have one real superpower or own ten fictional gadgets?",
+            "Would you rather explore the deep ocean or outer space?",
+            "Would you rather always know when someone is lying or always get away with lying?",
+            "Would you rather have the power to undo one decision or see 10 minutes into the future?",
+            "Would you rather give up coffee forever or give up cheese forever?",
+
+            // Animals & Nature
+            "Would you rather have a penguin that follows you everywhere or a parrot that narrates your life?",
+            "Would you rather ride a giant snail to work or be carried by a flock of geese?",
+            "Would you rather have a tail you can't hide or ears that rotate like a cat's?",
+            "Would you rather be chased by one angry goose for a mile or step on a Lego every morning for a year?",
+
+            // Food & Drink
+            "Would you rather have everything you eat make cartoon sound effects or have your drinks always be slightly warm?",
+            "Would you rather only eat food you cook blindfolded or only eat food chosen by a stranger?",
+            "Would you rather burp confetti or fart trumpet sounds?",
+            "Would you rather have ketchup dispensers for fingers or a straw permanently attached to your forehead?",
+
+            // Daily Life Chaos
+            "Would you rather have your phone battery always at 5% or your shoes always slightly untied?",
+            "Would you rather every door you open plays your entrance theme or every chair you sit on makes a whoopee cushion sound?",
+            "Would you rather only be able to walk backwards or only be able to run sideways?",
+            "Would you rather have autocorrect control your speech or predictive text choose your outfits?",
+            "Would you rather have a British accent when you're happy and a pirate accent when you're angry or vice versa?",
+
+            // Weird Superpowers
+            "Would you rather be able to refill anything once a day or be able to shrink any object to pocket size?",
+            "Would you rather summon any pizza instantly or always know the fastest route anywhere?",
+            "Would you rather have the ability to talk to furniture or make any plant grow instantly?",
+            "Would you rather glow in the dark permanently or leave glitter footprints everywhere you walk?",
+
+            // Social & Hypothetical
+            "Would you rather have a clone that does your laundry but wears your clothes or a robot butler that roasts you constantly?",
+            "Would you rather narrate your own life in third person out loud or hear a laugh track after everything you say?",
+            "Would you rather have a sentient hat that gives bad advice or sentient shoes that refuse to go certain places?",
+            "Would you rather live in a house where every wall is a mirror or every floor is a trampoline?",
+            "Would you rather be followed by dramatic orchestral music at all times or have a spotlight follow you everywhere?",
+
+            // Would They Even Argue About This?
+            "Would you rather have spaghetti for hair or mushrooms for ears?",
+            "Would you rather fight a waffle the size of a car or be attacked by a swarm of angry cupcakes?",
+            "Would you rather communicate only through interpretive dance for a week or speak only in song lyrics?",
+            "Would you rather have a duck-sized bodyguard or a bodyguard-sized duck as a pet?",
+            "Would you rather every dog you meet tells you a secret or every cat you meet judges you out loud?",
+        ];
+
+        // =====================================================================
+        // SESSION + PERSONA SELECTION
+        // =====================================================================
+        let sessionId = sessionStorage.getItem('summit_session_id');
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            sessionStorage.setItem('summit_session_id', sessionId);
+        }
+
+        // Pick 3 random personas for this session (persisted per tab)
+        let selectedPersonas = JSON.parse(sessionStorage.getItem('summit_selected_personas') || 'null');
+        if (!selectedPersonas) {
+            const keys = Object.keys(ALL_PERSONAS);
+            const shuffled = keys.sort(() => Math.random() - 0.5);
+            selectedPersonas = shuffled.slice(0, 3);
+            sessionStorage.setItem('summit_selected_personas', JSON.stringify(selectedPersonas));
+        }
+
+        // Build the active PERSONAS map for just the selected 3
+        const PERSONAS = {};
+        selectedPersonas.forEach(key => {
+            PERSONAS[key] = ALL_PERSONAS[key];
+        });
+
+        // =====================================================================
+        // SIDEBAR RENDERING
+        // =====================================================================
+        function renderSidebar() {
+            const onlineContainer = document.getElementById('sidebarPersonas');
+            const offlineContainer = document.getElementById('sidebarOffline');
+            onlineContainer.innerHTML = '';
+            offlineContainer.innerHTML = '';
+
+            const offlineKeys = Object.keys(ALL_PERSONAS).filter(k => !selectedPersonas.includes(k));
+            document.getElementById('onlineCount').textContent = selectedPersonas.length;
+            document.getElementById('offlineCount').textContent = offlineKeys.length;
+
+            selectedPersonas.forEach(key => {
+                const p = ALL_PERSONAS[key];
+                const div = document.createElement('div');
+                div.className = 'persona-item flex items-center gap-2.5 px-2 py-1.5 rounded cursor-default hover:bg-sidebar-hover transition-colors';
+                div.setAttribute('data-tip', p.tip);
+                div.innerHTML = `
+                    <div class="relative flex-shrink-0">
+                        <div class="avatar-ring w-8 h-8 rounded-full flex items-center justify-center text-lg" style="background: ${p.borderColor}20">${p.icon}</div>
+                        <div class="status-dot bg-green-500"></div>
+                    </div>
+                    <span class="text-[15px] font-medium truncate" style="color: var(--c-text-secondary)">${p.label}</span>
+                `;
+                onlineContainer.appendChild(div);
+            });
+
+            offlineKeys.forEach(key => {
+                const p = ALL_PERSONAS[key];
+                const div = document.createElement('div');
+                div.className = 'persona-item flex items-center gap-2.5 px-2 py-1.5 rounded cursor-default hover:bg-sidebar-hover transition-colors';
+                div.setAttribute('data-tip', p.tip);
+                div.innerHTML = `
+                    <div class="relative flex-shrink-0">
+                        <div class="avatar-ring w-8 h-8 rounded-full flex items-center justify-center text-lg grayscale opacity-50">${p.icon}</div>
+                        <div class="status-dot bg-gray-500"></div>
+                    </div>
+                    <span class="text-[15px] truncate" style="color: var(--c-text-faint)">${p.label}</span>
+                `;
+                offlineContainer.appendChild(div);
+            });
+        }
+
+        // =====================================================================
+        // STARTER QUESTION — first persona "asks" it as a chat bubble
+        // =====================================================================
+        let currentStarterQuestion = null;
+
+        function showStarterQuestion() {
+            const q = STARTER_QUESTIONS[Math.floor(Math.random() * STARTER_QUESTIONS.length)];
+            currentStarterQuestion = q;
+            const firstPersona = selectedPersonas[0];
+            addAgentResponse(firstPersona, q);
+        }
+
+        // =====================================================================
+        // AUTO-SCROLL (Discord-style)
+        // =====================================================================
+        // Must be defined before INIT since showStarterQuestion() triggers scrollToBottom().
+        let userIsNearBottom = true;
+        let programmaticScroll = false;
+
+        function isNearBottom() {
+            const main = document.getElementById('chatMessages');
+            return main.scrollHeight - main.scrollTop - main.clientHeight < 150;
+        }
+
+        document.getElementById('chatMessages').addEventListener('scroll', () => {
+            if (programmaticScroll) return;
+            userIsNearBottom = isNearBottom();
+        });
+
+        function scrollToBottom(force = false) {
+            const main = document.getElementById('chatMessages');
+            if (force || userIsNearBottom) {
+                programmaticScroll = true;
+                main.scrollTop = main.scrollHeight;
+                userIsNearBottom = true;
+                requestAnimationFrame(() => { programmaticScroll = false; });
+            }
+        }
+
+        // Observe the message container for any DOM changes (new messages,
+        // streaming token appends, etc.) and auto-scroll when appropriate.
+        const _chatObserver = new MutationObserver(() => scrollToBottom());
+        _chatObserver.observe(document.getElementById('messageContainer'), {
+            childList: true,
+            subtree: true,
+            characterData: true,
+        });
+
+        // =====================================================================
+        // INIT
+        // =====================================================================
+        renderSidebar();
+        showStarterQuestion();
+
+        /**
+         * Start a new chat — new session, new random personas, new starter question.
+         */
+        function newChat() {
+            sessionId = crypto.randomUUID();
+            sessionStorage.setItem('summit_session_id', sessionId);
+
+            // Pick new random personas
+            const keys = Object.keys(ALL_PERSONAS);
+            const shuffled = keys.sort(() => Math.random() - 0.5);
+            selectedPersonas = shuffled.slice(0, 3);
+            sessionStorage.setItem('summit_selected_personas', JSON.stringify(selectedPersonas));
+
+            // Rebuild active personas map
+            Object.keys(PERSONAS).forEach(k => delete PERSONAS[k]);
+            selectedPersonas.forEach(key => {
+                PERSONAS[key] = ALL_PERSONAS[key];
+            });
+
+            renderSidebar();
+
+            document.getElementById('messageContainer').innerHTML = '';
+            showStarterQuestion();
+        }
+
+        // =====================================================================
+        // HTML HELPERS
+        // =====================================================================
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Strip any [TAG]: or (Name said) prefixes the LLM might echo from history
+        function stripPrefix(text) {
+            let prev;
+            do {
+                prev = text;
+                text = text
+                    .replace(/^\s*\[[A-Z_]+\]\s*:?\s*/, '')
+                    .replace(/^\s*\([A-Za-z ']+ said\)\s*/, '');
+            } while (text !== prev);
+            return text;
+        }
+
+        function simpleMarkdown(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/`(.*?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // =====================================================================
+        // MESSAGE RENDERING
+        // =====================================================================
+        function timeNow() {
+            return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addUserMessage(message) {
+            const welcome = document.getElementById('welcomeMessage');
+            if (welcome) welcome.remove();
+
+            const container = document.getElementById('messageContainer');
+            const div = document.createElement('div');
+            div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
+            div.innerHTML = `
+                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-[15px] mt-0.5">Y</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-medium text-[15px]" style="color: var(--c-user-accent)">You</span>
+                        <span class="text-xs" style="color: var(--c-text-faint)">${timeNow()}</span>
+                    </div>
+                    <div class="text-base leading-relaxed mt-0.5" style="color: var(--c-text-primary)">${escapeHtml(message)}</div>
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom(true); // always scroll to your own message
+        }
+
+        function addAgentResponse(persona, text) {
+            const config = PERSONAS[persona];
+            if (!config) return;
+            const container = document.getElementById('messageContainer');
+            const div = document.createElement('div');
+            div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
+            div.innerHTML = `
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25">${config.icon}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-medium text-[15px]" style="color: ${config.borderColor}">${config.label}</span>
+                        <span class="text-xs" style="color: var(--c-text-faint)">${timeNow()}</span>
+                    </div>
+                    <div class="markdown-content text-base leading-relaxed mt-0.5" style="color: var(--c-text-primary)">
+                        ${simpleMarkdown(escapeHtml(stripPrefix(text)))}
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+        }
+
+        // =====================================================================
+        // THINKING STATE
+        // =====================================================================
+        function setThinking(show) {
+            const el = document.getElementById('thinkingState');
+            const input = document.getElementById('messageInput');
+            const button = document.getElementById('sendButton');
+
+            if (show) {
+                el.classList.remove('hidden');
+                input.disabled = true;
+                button.disabled = true;
+                startTimer();
+            } else {
+                el.classList.add('hidden');
+                input.disabled = false;
+                button.disabled = false;
+                stopTimer();
+            }
+        }
+
+        let timerInterval;
+        let timerStart;
+
+        function startTimer() {
+            timerStart = Date.now();
+            const timerEl = document.getElementById('thinkingTimer');
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+                timerEl.textContent = `${elapsed}s`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('thinkingTimer').textContent = '';
+        }
+
+        // =====================================================================
+        // STREAMING MODE (Mercure / SSE)
+        // =====================================================================
+        const MERCURE_URL = '{{ mercure_url | default("") }}';
+        const STREAMING_ENABLED = {{ streaming_enabled | default(false) ? 'true' : 'false' }};
+
+        const streamBubbles = {};
+
+        function createStreamingBubble(persona) {
+            const welcome = document.getElementById('welcomeMessage');
+            if (welcome) welcome.remove();
+
+            const config = PERSONAS[persona];
+            if (!config) return null;
+            const container = document.getElementById('messageContainer');
+            const div = document.createElement('div');
+            div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
+            div.innerHTML = `
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25">${config.icon}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-medium text-[15px]" style="color: ${config.borderColor}">${config.label}</span>
+                        <span class="text-xs" style="color: var(--c-text-faint)">${timeNow()}</span>
+                        <span class="typing-indicator" style="color: ${config.borderColor}"><span class="typing-dots"><span></span><span></span><span></span></span></span>
+                    </div>
+                    <div class="content markdown-content text-base leading-relaxed mt-0.5" style="color: var(--c-text-primary)"></div>
+                </div>
+            `;
+            container.appendChild(div);
+            streamBubbles[persona] = div;
+            scrollToBottom();
+            return div;
+        }
+
+        function startStreaming(topicBase) {
+            // Pre-create all bubbles immediately — don't wait for the "start" event.
+            // The PHP dev server is single-threaded, so kernel.terminate fires before
+            // the HTTP response reaches the browser. The "start" event for the first
+            // persona can be published to Mercure before EventSource finishes its SSE
+            // handshake, causing the first persona's bubble to never be created.
+            selectedPersonas.forEach(persona => createStreamingBubble(persona));
+
+            // Subscribe to each of the selected personas' topics
+            selectedPersonas.forEach(persona => {
+                const topic = topicBase + '/' + persona;
+                const url = new URL(MERCURE_URL);
+                url.searchParams.append('topic', topic);
+
+                const es = new EventSource(url);
+
+                es.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'text' && streamBubbles[persona]) {
+                        const contentEl = streamBubbles[persona].querySelector('.content');
+                        contentEl.insertAdjacentText('beforeend', data.content);
+                        scrollToBottom();
+                    } else if (data.type === 'complete' && streamBubbles[persona]) {
+                        // Strip any [TAG]: prefix the LLM added despite instructions
+                        const contentEl2 = streamBubbles[persona].querySelector('.content');
+                        contentEl2.textContent = stripPrefix(contentEl2.textContent);
+                        const indicator = streamBubbles[persona].querySelector('.typing-indicator');
+                        if (indicator) indicator.remove();
+                        es.close();
+                    } else if (data.type === 'error') {
+                        if (streamBubbles[persona]) {
+                            const contentEl = streamBubbles[persona].querySelector('.content');
+                            contentEl.textContent = 'Error: ' + (data.message || 'Unknown');
+                            const indicator = streamBubbles[persona].querySelector('.typing-indicator');
+                            if (indicator) indicator.remove();
+                        }
+                        es.close();
+                    }
+                };
+            });
+
+            // Listen for the "all done" signal
+            const doneUrl = new URL(MERCURE_URL);
+            doneUrl.searchParams.append('topic', topicBase + '/done');
+            const doneEs = new EventSource(doneUrl);
+            doneEs.onmessage = () => {
+                doneEs.close();
+                setThinking(false);
+            };
+        }
+
+        // =====================================================================
+        // SEND MESSAGE
+        // =====================================================================
+        async function sendMessage(event) {
+            event.preventDefault();
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            addUserMessage(message);
+            setThinking(true);
+
+            // If this is the first message and a starter question was shown,
+            // prepend it so the LLM knows what question the user is answering.
+            let fullMessage = message;
+            if (currentStarterQuestion) {
+                fullMessage = `The group was asked: "${currentStarterQuestion}" — the user answered: "${message}". Respond to their answer in character.`;
+                currentStarterQuestion = null;
+            }
+
+            const topicBase = STREAMING_ENABLED ? ('the-summit/' + (sessionId || 'anonymous')) : null;
+            if (topicBase) {
+                startStreaming(topicBase);
+            }
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: fullMessage,
+                        session_id: sessionId,
+                        streaming: STREAMING_ENABLED,
+                        personas: selectedPersonas,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    addAgentResponse(selectedPersonas[0], 'Error: ' + data.error);
+                    setThinking(false);
+                } else if (data.status === 'streaming') {
+                    // EventSource listeners already active
+                } else {
+                    for (const r of data.responses) {
+                        addAgentResponse(r.persona, r.text);
+                    }
+                    setThinking(false);
+                }
+            } catch (err) {
+                addAgentResponse(selectedPersonas[0], 'Network error: ' + err.message);
+                setThinking(false);
+            }
+        }
+    </script>
+</body>
+</html>
