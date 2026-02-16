@@ -42,7 +42,7 @@ def _create_model():
             model_id=os.environ.get("MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0"),
             region_name=os.environ.get("AWS_DEFAULT_REGION", "ap-southeast-2"),
             streaming=True,
-            max_tokens=120,
+            max_tokens=1024,
         )
     elif MODEL_PROVIDER == "ollama":
         from strands.models.ollama import OllamaModel
@@ -50,7 +50,7 @@ def _create_model():
         return OllamaModel(
             host=os.environ.get("OLLAMA_HOST", "http://ollama:11434"),
             model_id=os.environ.get("OLLAMA_MODEL", "qwen2.5:14b"),
-            max_tokens=120,
+            max_tokens=1024,
         )
     else:
         raise ValueError(f"Unknown MODEL_PROVIDER: {MODEL_PROVIDER}. Use 'ollama' or 'bedrock'.")
