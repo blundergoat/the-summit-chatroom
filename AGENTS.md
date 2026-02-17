@@ -30,7 +30,7 @@ vendor/bin/phpunit tests/Unit/Service/SummitOrchestratorTest.php
 Coverage checks use an 80% minimum threshold in preflight (`composer preflight:coverage`).
 
 ## Commit & Pull Request Guidelines
-Commit messages in history use concise imperative subjects (`Add ...`, `Fix ...`, `Refactor ...`, `Enhance ...`). Keep commits scoped to one change and explain non-obvious decisions in the body.  
+Commit messages use conventional commits format — see `.github/instructions/commit-messages.instructions.md` for full rules. Key points: `type(scope): subject` + body with 2-5 specific bullets. Never write vague one-liners. Keep commits scoped to one logical change.
 PRs should include: what changed, why, test evidence (commands run), and screenshots/GIFs for UI updates. Link related issues and call out any `.env` or Docker/config changes explicitly.
 
 ## Security & Configuration Tips

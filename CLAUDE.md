@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-The Summit is a multi-agent group chat application where three AI advisors (Analyst, Skeptic, Strategist) debate user questions sequentially. Built with PHP/Symfony backend, Python/FastAPI agent layer, and Mercure for real-time streaming.
+The Summit is a multi-agent group chat where AI characters debate user questions. Three characters are randomly selected per session from a roster of 10 comedy personas (Angry Chef, Gandalf, Ship's Cat, etc.). Built with PHP/Symfony backend, Python/FastAPI agent layer, and Mercure for real-time streaming.
+
+A secret objectives system occasionally injects a hidden side mission into one character's prompt per round, creating comedic contrast while the other two play it straight.
 
 ## Commands
 
@@ -26,8 +28,21 @@ composer analyse:messdetector          # PHPMD
 composer cs:check                      # Dry-run PHP-CS-Fixer
 composer cs:fix                        # Auto-fix code style (PSR-12)
 
+# Local dev
+./scripts/start-dev.sh                 # Start PHP + Python + Ollama (bare-metal)
+./scripts/health-check-localdev.sh     # Verify all services are running
+
 # Docker (full stack)
 docker compose up --build              # Build and start all 5 services
+
+# Dependencies
+./scripts/dependencies-install.sh      # Install from lock files
+./scripts/dependencies-update.sh       # Update to latest within constraints
+
+# Deployment
+./scripts/deploy.sh                    # Build, push to ECR, redeploy ECS
+./scripts/terraform.sh plan            # Preview infrastructure changes
+./scripts/terraform.sh apply           # Apply infrastructure changes
 ```
 
 ## Architecture
@@ -48,20 +63,20 @@ Browser (Twig UI :8082)
 - **Sync**: `SummitOrchestrator::deliberate()` calls all 3 agents sequentially, blocks until complete, returns JSON
 - **Streaming**: `SummitStreamOrchestrator::deliberateStreaming()` runs after HTTP response via `kernel.terminate` event, publishes tokens to Mercure topics in real-time
 
-### The Council Pattern
+### The Summit Pattern
 
-Three agents respond in sequence, each seeing previous responses:
-1. **Analyst** - Quantifies claims with baselines and confidence bands
-2. **Skeptic** - Challenges assumptions, demands evidence
-3. **Strategist** - Synthesizes into actionable recommendations
+Three characters are randomly selected per session from a roster of 10 personas. They respond in sequence, each seeing previous responses via the shared session. All three hit the same Python endpoint; the `persona` field in request metadata selects different system prompts.
 
-All three agents hit the same Python endpoint; the `persona` field in request metadata selects different system prompts. Agents are injected via `#[Autowire(service: 'strands.client.{name}')]` from `config/packages/strands.yaml`.
+The 10 personas are defined in `strands_agents/agents/multi_persona_chat.py`. The secret objectives system in `strands_agents/persona_objectives.py` occasionally assigns one character a hidden side mission per round.
+
+A single `StrandsClient` is injected via `#[Autowire(service: 'strands.client.summit')]` from `config/packages/strands.yaml`.
 
 ### Key Components
 
-- **PHP layer** (`src/`): PSR-4 namespace `App\`, Symfony 6.4. Controller routes requests, orchestrators manage agent sequencing
-- **Python agent** (`strands_agents/`): FastAPI with Strands SDK. `agents/` has per-persona modules (analyst, skeptic, strategist), `api/server.py` is the HTTP layer, `session.py` has in-memory conversation history with deduplication
+- **PHP layer** (`src/`): PSR-4 namespace `App\`, Symfony 6.4. `ChatController` routes requests, `SummitOrchestrator` and `SummitStreamOrchestrator` manage agent sequencing
+- **Python agent** (`strands_agents/`): FastAPI with Strands SDK. `agents/multi_persona_chat.py` defines 10 persona system prompts, `api/server.py` is the HTTP layer, `session.py` has in-memory conversation history, `persona_objectives.py` handles secret objective injection
 - **Frontend** (`templates/chatroom.html.twig`): Single Twig template with inline JS for both fetch (sync) and EventSource (streaming)
+- **Infrastructure** (`infra/terraform/`): AWS deployment — ECS Fargate, ALB, WAF, Route53, DynamoDB, ECR
 
 ### Docker Services (docker-compose.yml)
 
@@ -83,8 +98,10 @@ The `blundergoat/strands-client` package is a **local path dependency** at `../s
 
 Copy `.env.example` to `.env`. Key variables:
 - `MODEL_PROVIDER`: `ollama` (local, default) or `bedrock` (AWS)
-- `AGENT_ENDPOINT`: Python agent URL (`http://agent:8000` in Docker)
+- `MODEL_ID`: Bedrock model ID (only when `MODEL_PROVIDER=bedrock`)
+- `AGENT_ENDPOINT`: Python agent URL (`http://agent:8000` in Docker, `http://localhost:8081` bare-metal)
 - `MERCURE_URL` / `MERCURE_PUBLIC_URL`: Mercure hub endpoints
+- `MERCURE_JWT_SECRET`: JWT signing key for Mercure (must be ≥ 32 chars)
 
 ## Workflow Rules
 
@@ -113,6 +130,32 @@ Do NOT consider a feature done until all affected layers are covered.
 
 Always run `composer preflight` (or at minimum `composer test && composer analyse && composer cs:check`) BEFORE reporting that a task is complete. Fix any failures before declaring success.
 
+### Stop-the-line
+
+If tests, builds, or analysis break during a task — stop adding features immediately. Preserve the error output, diagnose the failure, and fix it before continuing. Don't push forward hoping it resolves itself.
+
+### Control scope
+
+If a change reveals deeper issues, fix only what is necessary for correctness. Log follow-ups as TODOs or issues rather than expanding the current task. A focused fix now beats a sprawling refactor that introduces new risk.
+
+### Incremental delivery
+
+Prefer thin vertical slices over big-bang changes. Implement → test → verify → then expand. When feasible, keep changes behind safe defaults or feature flags so partial work doesn't break the main path.
+
 ### Deep investigation
 
 When asked to review code or investigate bugs, do a DEEP first pass. Don't produce surface-level findings. Check for false positives before reporting - verify each finding by reading surrounding code. If told to "look deeper", treat it as a signal the first pass was insufficient.
+
+### Bug triage pattern
+
+When given a bug report, follow this order:
+1. **Reproduce** reliably (test, script, or minimal steps)
+2. **Localize** the failure (which layer: controller, orchestrator, Python agent, LLM, Mercure)
+3. **Reduce** to a minimal failing case
+4. **Fix** root cause (not symptoms)
+5. **Guard** with regression test coverage
+6. **Verify** end-to-end against the original report
+
+### Git hygiene
+
+Keep commits atomic and describable — one logical change per commit. Don't mix formatting-only changes with behavioral changes in the same commit. Don't rewrite history unless explicitly asked.

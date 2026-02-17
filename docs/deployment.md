@@ -40,22 +40,44 @@ infra/terraform/
 
 ### Architecture
 
-```
-Route 53 (summit.blundergoat.com)
-     |
-     v
-Application Load Balancer  (public subnets, WAF attached)
-     |
-     v
-ECS Fargate Task  (private subnets)
-  - App container    (PHP Symfony, port 8080)  <-- ALB target
-  - Agent container  (Python FastAPI, port 8000)  <-- localhost sidecar
-       |
-       +-- AWS Bedrock (model invocation)
-       +-- DynamoDB (session persistence)
+```mermaid
+graph TB
+    subgraph Internet
+        Browser[Browser]
+    end
+
+    subgraph AWS["AWS (us-east-1)"]
+        R53["Route 53<br/>summit.blundergoat.com"]
+        WAF["WAF<br/>Rate limiting"]
+
+        subgraph VPC["Shared VPC"]
+            subgraph Public["Public Subnets"]
+                ALB["ALB<br/>HTTPS :443"]
+            end
+
+            subgraph Private["Private Subnets"]
+                subgraph Task["ECS Fargate Task"]
+                    App["App<br/>PHP Symfony :8080"]
+                    Agent["Agent<br/>Python FastAPI :8000"]
+                    Mercure["Mercure<br/>SSE hub :3100"]
+                end
+            end
+        end
+
+        Bedrock["Amazon Bedrock"]
+        DDB["DynamoDB<br/>Sessions"]
+    end
+
+    Browser --> R53
+    R53 --> WAF --> ALB
+    ALB -->|"/* → :8080"| App
+    ALB -->|"/.well-known/mercure → :3100"| Mercure
+    App -->|"localhost:8000"| Agent
+    Agent --> Bedrock
+    Agent --> DDB
 ```
 
-The app and agent run as a sidecar pair in the same ECS task, communicating over `localhost:8000`.
+The app, agent, and Mercure run as sidecars in the same ECS task, communicating over `localhost`.
 
 ---
 
@@ -159,6 +181,15 @@ Builds Docker images for the agent and/or app containers, pushes them to ECR, an
 ```
 
 ### What It Does
+
+```mermaid
+graph LR
+    A["Validate<br/>prerequisites"] --> B["Read ECR URLs<br/>from terraform output"]
+    B --> C["Authenticate<br/>to ECR"]
+    C --> D["Build Docker<br/>image(s)"]
+    D --> E["Push to ECR"]
+    E --> F["Force ECS<br/>redeployment"]
+```
 
 1. **Validates prerequisites** — checks for Docker, AWS CLI, and active AWS credentials
 2. **Reads ECR URLs from Terraform** — runs `terraform output` against the prod environment to get repository URLs and cluster name

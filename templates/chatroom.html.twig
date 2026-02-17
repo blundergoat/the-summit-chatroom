@@ -224,7 +224,16 @@
     </style>
 </head>
 
-<body class="bg-chatbg h-screen overflow-hidden flex">
+<body class="bg-chatbg overflow-hidden flex" style="height: 100vh; height: 100dvh">
+    <script>
+        // Mobile viewport fix — 100vh doesn't account for browser chrome on mobile.
+        // This sets a CSS variable to the actual visible height via window.innerHeight.
+        function fixMobileVh() {
+            document.body.style.height = window.innerHeight + 'px';
+        }
+        fixMobileVh();
+        window.addEventListener('resize', fixMobileVh);
+    </script>
 
     {# Mobile sidebar backdrop #}
     <div id="sidebarBackdrop" onclick="closeSidebar()"></div>
@@ -233,9 +242,14 @@
     <aside id="personaSidebar" class="w-72 bg-sidebar flex flex-col flex-shrink-0">
 
         {# Sidebar header #}
-        <div class="h-12 px-4 flex items-center gap-2.5 shadow-sm" style="border-bottom: 1px solid var(--c-sidebar-border)">
-            <img src="/images/blundergoat-avatar.jpg" alt="Blunder Goat" class="w-7 h-7 rounded-full ring-2 ring-orange-500/40 flex-shrink-0">
-            <h1 class="font-bold text-base tracking-wide truncate" style="color: var(--c-text-primary)">The Summit</h1>
+        <div class="px-4 shadow-sm" style="border-bottom: 1px solid var(--c-sidebar-border)">
+            <div class="h-12 flex items-center gap-2.5">
+                <img src="/images/blundergoat-avatar.jpg" alt="Blunder Goat" class="w-7 h-7 rounded-full ring-2 ring-orange-500/40 flex-shrink-0">
+                <h1 class="font-bold text-base tracking-wide truncate" style="color: var(--c-text-primary)">The Summit</h1>
+            </div>
+            <a href="https://www.blundergoat.com" target="_blank" rel="noopener" class="block text-[11px] pb-2 -mt-1 hover:underline transition-colors" style="color: var(--c-text-faint); padding-left: 37px;">
+                created by BlunderGOAT
+            </a>
         </div>
 
         {# Channel / room name #}
@@ -270,6 +284,7 @@
                 <div class="text-xs truncate" style="color: var(--c-text-muted)">Online</div>
             </div>
         </div>
+
     </aside>
 
     {# MAIN CHAT AREA #}
@@ -317,7 +332,7 @@
         </div>
 
         {# INPUT AREA #}
-        <footer class="px-4 pt-0 pb-6">
+        <footer class="px-4 pt-0 pb-6 max-md:pb-2 flex-shrink-0">
             <form onsubmit="sendMessage(event)"
                   class="input-form bg-inputbg rounded-lg flex items-end border border-input-border transition-colors">
                 <input
@@ -340,6 +355,9 @@
                     </svg>
                 </button>
             </form>
+            <div class="md:hidden text-center pt-1">
+                <a href="https://www.blundergoat.com" target="_blank" rel="noopener" class="text-[10px] hover:underline" style="color: var(--c-text-faint)">created by BlunderGOAT</a>
+            </div>
         </footer>
     </div>
 
@@ -734,7 +752,7 @@
             const container = document.getElementById('messageContainer');
             const div = document.createElement('div');
             div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
-            const objectiveRing = hasObjective ? 'border: 2px solid #ef4444;' : '';
+            const objectiveRing = hasObjective ? 'border: 1px solid #000000;' : '';
             div.innerHTML = `
                 <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25; ${objectiveRing}">${config.icon}</div>
                 <div class="flex-1 min-w-0">
@@ -855,7 +873,7 @@
                         // Apply red ring if this persona had a secret objective
                         if (data.has_objective) {
                             const avatar = streamBubbles[persona].querySelector('.flex-shrink-0');
-                            if (avatar) avatar.style.border = '2px solid #ef4444';
+                            if (avatar) avatar.style.border = '1px solid #000000';
                         }
                         es.close();
                     } else if (data.type === 'error') {

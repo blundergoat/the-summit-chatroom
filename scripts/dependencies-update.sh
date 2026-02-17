@@ -106,10 +106,14 @@ if [[ "$DO_PHP" == true ]]; then
         update_output=$(cd "$REPO_ROOT" && composer update 2>&1)
         update_exit=$?
         if [[ $update_exit -eq 0 ]]; then
-            updated=$(echo "$update_output" | grep -cE "^\s+- (Upgrading|Installing)" || true)
+            changed_lines=$(echo "$update_output" | grep -E "^\s+- (Upgrading|Installing|Removing)" || true)
+            updated=$(echo "$changed_lines" | grep -c "." || true)
             updated="${updated//[^0-9]/}"
             if [[ "${updated:-0}" -gt 0 ]]; then
                 pass "${updated} package(s) changed"
+                echo "$changed_lines" | while IFS= read -r line; do
+                    echo -e "       ${DIM}${line}${RESET}"
+                done
             else
                 pass "already up to date"
             fi
@@ -178,13 +182,20 @@ if [[ "$DO_PYTHON" == true ]]; then
         pip_exit=$?
         if [[ $pip_exit -eq 0 ]]; then
             after=$("$VENV_DIR/bin/pip" freeze 2>/dev/null | sort)
-            changed=$(diff <(echo "$before") <(echo "$after") | grep -c "^[<>]" || true)
+            diff_output=$(diff <(echo "$before") <(echo "$after") || true)
+            changed=$(echo "$diff_output" | grep -c "^[<>]" || true)
             changed="${changed:-0}"
             changed="${changed//[^0-9]/}"
             # Each change shows as two diff lines (< old, > new), so divide by 2
             pkg_changed=$(( ${changed:-0} / 2 ))
             if [[ "$pkg_changed" -gt 0 ]]; then
                 pass "${pkg_changed} package(s) changed"
+                # Show old→new version for each changed package
+                echo "$diff_output" | grep "^[<>]" | sed 's/^< //' | sed 's/^> //' | \
+                    awk -F'==' '{packages[$1] = packages[$1] ? packages[$1] " → " $2 : $2} END {for (p in packages) print p "  " packages[p]}' | sort | \
+                    while IFS= read -r line; do
+                        echo -e "       ${DIM}${line}${RESET}"
+                    done
             else
                 pass "already up to date"
             fi

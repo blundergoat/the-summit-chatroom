@@ -50,12 +50,20 @@ projects/
 
 ## Architecture
 
-Both modes run the same three services:
+Both modes run the same core services:
 
+```mermaid
+graph LR
+    Browser -->|":8082"| PHP["PHP Symfony<br/>Chat UI"]
+    PHP -->|":8081"| Agent["Python FastAPI<br/>Agent"]
+    Agent -->|":11434"| LLM["Ollama<br/>(or Bedrock)"]
+    PHP -.->|":3100"| Mercure["Mercure<br/>SSE hub"]
+    Mercure -.->|"EventSource"| Browser
+
+    style Mercure stroke-dasharray: 5 5
 ```
-Browser ──► PHP Symfony app ──► Python FastAPI agent ──► LLM (Ollama or Bedrock)
-               (port 8082)         (port 8081)           (port 11434)
-```
+
+Mercure is optional (Docker Compose only) — without it, the app falls back to sync mode.
 
 ### Docker Compose mode
 
@@ -209,6 +217,26 @@ All scripts are in the `scripts/` directory.
 ## Sync vs Streaming Mode
 
 The app supports two modes for receiving agent responses:
+
+```mermaid
+graph TB
+    subgraph Sync["Sync Mode"]
+        direction LR
+        S1["Browser"] -->|"POST /chat"| S2["PHP"]
+        S2 -->|"call 3 agents"| S3["Agent"]
+        S3 -->|"JSON response"| S2
+        S2 -->|"wait 30-45s"| S1
+    end
+
+    subgraph Stream["Streaming Mode"]
+        direction LR
+        T1["Browser"] -->|"POST /chat"| T2["PHP"]
+        T2 -->|"topic ID"| T1
+        T1 -->|"EventSource"| T4["Mercure"]
+        T2 -->|"call agents"| T3["Agent"]
+        T2 -->|"publish tokens"| T4
+    end
+```
 
 ### Sync mode (both Docker and bare-metal)
 
