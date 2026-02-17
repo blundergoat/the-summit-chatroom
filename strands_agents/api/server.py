@@ -65,7 +65,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents import create_agent, get_personas
-from sabotage import SabotageEngine
+from persona_objectives import SabotageEngine
 from session import SessionStore
 
 # Create the FastAPI application instance
@@ -111,6 +111,7 @@ class InvokeResponse(BaseModel):
     text: str                           # The agent's complete response text
     agent: str                          # Which persona generated this response
     session_id: str | None = None       # Echo back the session ID
+    has_objective: bool = False         # Whether this persona had a secret objective
     usage: UsageStats = Field(default_factory=UsageStats)
     tools_used: list = Field(default_factory=list)
 
@@ -150,7 +151,7 @@ def map_sdk_event(sdk_event) -> dict | None:
     return None
 
 
-def build_complete_event(text: str, session_id: str | None) -> str:
+def build_complete_event(text: str, session_id: str | None, has_objective: bool = False) -> str:
     """Build the terminal 'complete' SSE event as a JSON string.
 
     This is sent at the end of every stream to signal that streaming is done.
@@ -160,6 +161,7 @@ def build_complete_event(text: str, session_id: str | None) -> str:
         "type": "complete",
         "text": text,
         "session_id": session_id,
+        "has_objective": has_objective,
         "usage": {},
         "tools_used": [],
     })
@@ -279,6 +281,7 @@ async def invoke(req: InvokeRequest):
         text=response_text,
         agent=persona,
         session_id=req.session_id,
+        has_objective=bool(objective_prompt),
     )
 
 
@@ -366,7 +369,7 @@ async def stream(req: InvokeRequest):
             # GUARANTEE: Every stream must end with "complete" or "error".
             # If the SDK didn't emit a terminal event, we send one now.
             if not got_terminal:
-                yield f"data: {build_complete_event(full_text, req.session_id)}\n\n"
+                yield f"data: {build_complete_event(full_text, req.session_id, bool(objective_prompt))}\n\n"
         except Exception as e:
             # If streaming fails (network error, LLM crash, etc.),
             # send an error event so the PHP client knows what happened.

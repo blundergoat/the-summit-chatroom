@@ -197,10 +197,37 @@
         .theme-toggle { transition: transform 0.3s ease; }
         .theme-toggle:hover { transform: scale(1.15); }
         .theme-toggle:active { transform: scale(0.95); }
+
+        /* Mobile sidebar overlay */
+        @media (max-width: 767px) {
+            #personaSidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 50;
+                transform: translateX(-100%);
+                transition: transform 0.2s ease;
+            }
+            #personaSidebar.open { transform: translateX(0); }
+            #sidebarBackdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 40;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s ease;
+            }
+            #sidebarBackdrop.open { opacity: 1; pointer-events: auto; }
+        }
     </style>
 </head>
 
 <body class="bg-chatbg h-screen overflow-hidden flex">
+
+    {# Mobile sidebar backdrop #}
+    <div id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
     {# SIDEBAR #}
     <aside id="personaSidebar" class="w-72 bg-sidebar flex flex-col flex-shrink-0">
@@ -250,6 +277,11 @@
 
         {# Chat header #}
         <header class="h-12 bg-chatbg px-4 flex items-center gap-3 flex-shrink-0 shadow-sm" style="border-bottom: 1px solid var(--c-border)">
+            <button onclick="toggleSidebar()" class="md:hidden p-1 -ml-1 rounded hover:bg-sidebar-hover" style="color: var(--c-text-muted)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
             <span class="text-lg" style="color: var(--c-text-muted)">#</span>
             <h2 class="font-bold text-base" style="color: var(--c-text-primary)">group-chat</h2>
             <div class="w-px h-5 mx-1" style="background: var(--c-divider)"></div>
@@ -277,7 +309,7 @@
 
         {# Typing / thinking indicator #}
         <div id="thinkingState" class="hidden pl-4 pr-4 pb-0">
-            <div class="flex items-center gap-2 text-[15px] px-[72px]" style="color: var(--c-text-muted)">
+            <div class="flex items-center gap-2 text-[15px] px-[72px] md:px-[72px] max-md:px-2" style="color: var(--c-text-muted)">
                 <span class="typing-dots" style="color: var(--c-text-secondary)"><span></span><span></span><span></span></span>
                 <span id="thinkingLabel">The summit is deliberating...</span>
                 <span class="text-xs" style="color: var(--c-text-faint)" id="thinkingTimer"></span>
@@ -316,6 +348,19 @@
     <div id="tooltip"></div>
 
     <script>
+        // =====================================================================
+        // MOBILE SIDEBAR TOGGLE
+        // =====================================================================
+        function toggleSidebar() {
+            document.getElementById('personaSidebar').classList.toggle('open');
+            document.getElementById('sidebarBackdrop').classList.toggle('open');
+        }
+
+        function closeSidebar() {
+            document.getElementById('personaSidebar').classList.remove('open');
+            document.getElementById('sidebarBackdrop').classList.remove('open');
+        }
+
         // =====================================================================
         // TOOLTIP
         // =====================================================================
@@ -683,14 +728,15 @@
             scrollToBottom(true); // always scroll to your own message
         }
 
-        function addAgentResponse(persona, text) {
+        function addAgentResponse(persona, text, hasObjective = false) {
             const config = PERSONAS[persona];
             if (!config) return;
             const container = document.getElementById('messageContainer');
             const div = document.createElement('div');
             div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
+            const objectiveRing = hasObjective ? 'border: 2px solid #ef4444;' : '';
             div.innerHTML = `
-                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25">${config.icon}</div>
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25; ${objectiveRing}">${config.icon}</div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-baseline gap-2">
                         <span class="font-medium text-[15px]" style="color: ${config.borderColor}">${config.label}</span>
@@ -806,6 +852,11 @@
                         contentEl2.textContent = stripPrefix(contentEl2.textContent);
                         const indicator = streamBubbles[persona].querySelector('.typing-indicator');
                         if (indicator) indicator.remove();
+                        // Apply red ring if this persona had a secret objective
+                        if (data.has_objective) {
+                            const avatar = streamBubbles[persona].querySelector('.flex-shrink-0');
+                            if (avatar) avatar.style.border = '2px solid #ef4444';
+                        }
                         es.close();
                     } else if (data.type === 'error') {
                         if (streamBubbles[persona]) {
@@ -877,7 +928,7 @@
                     // EventSource listeners already active
                 } else {
                     for (const r of data.responses) {
-                        addAgentResponse(r.persona, r.text);
+                        addAgentResponse(r.persona, r.text, r.has_objective);
                     }
                     setThinking(false);
                 }

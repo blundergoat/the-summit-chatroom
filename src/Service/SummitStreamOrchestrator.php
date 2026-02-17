@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Psr\Log\LoggerInterface;
-use Strands\Context\AgentContext;
-use Strands\StrandsClient;
-use Strands\Streaming\StreamEvent;
-use Strands\Streaming\StreamEventType;
+use StrandsPhpClient\Context\AgentContext;
+use StrandsPhpClient\StrandsClient;
+use StrandsPhpClient\Streaming\StreamEvent;
+use StrandsPhpClient\Streaming\StreamEventType;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -141,6 +141,7 @@ class SummitStreamOrchestrator
                                 'type' => 'complete',
                                 'persona' => $persona,
                                 'correlation_id' => $correlationId,
+                                'has_objective' => $event->hasObjective,
                             ]),
                             StreamEventType::Error => $this->publish($topic, [
                                 'type' => 'error',

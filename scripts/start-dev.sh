@@ -62,6 +62,7 @@ ARROW="${BLUE}▸${RESET}"
 # ── Log directory ──────────────────────────────────────────────────
 LOG_DIR="$REPO_ROOT/var/log/dev"
 mkdir -p "$LOG_DIR"
+find "$LOG_DIR" -name "*.log" -mtime +7 -delete 2>/dev/null || true
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 PHP_LOG="$LOG_DIR/php-${TIMESTAMP}.log"
 AGENT_LOG="$LOG_DIR/agent-${TIMESTAMP}.log"
@@ -75,9 +76,26 @@ cleanup() {
     echo ""
     echo -e "${DIM}  Shutting down...${RESET}"
     for pid in "${PIDS[@]}"; do
+        kill "$pid" 2>/dev/null || true
+    done
+    # Poll until all children exit, force-kill after 5 seconds
+    local deadline=$(( SECONDS + 5 ))
+    while (( SECONDS < deadline )); do
+        local still_running=false
+        for pid in "${PIDS[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                still_running=true
+                break
+            fi
+        done
+        $still_running || break
+        sleep 0.2
+    done
+    # Force-kill any stragglers
+    for pid in "${PIDS[@]}"; do
         if kill -0 "$pid" 2>/dev/null; then
-            kill "$pid" 2>/dev/null
-            wait "$pid" 2>/dev/null
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
         fi
     done
     # Stop Docker containers we started
@@ -110,6 +128,7 @@ header() {
 
 # ── Preflight ───────────────────────────────────────────────────────
 header
+STARTUP_START=$SECONDS
 
 # ── Docker cleanup (free ports if docker compose is running) ──────
 if command -v docker &>/dev/null; then
@@ -176,7 +195,7 @@ env_default() {
     local var="$1" fallback="$2"
     if [[ -z "${!var:-}" && -f "$REPO_ROOT/.env" ]]; then
         local val
-        val="$(grep -E "^${var}=" "$REPO_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+        val="$(grep -E "^[[:space:]]*${var}=" "$REPO_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)"
         printf -v "$var" '%s' "${val:-$fallback}"
     else
         printf -v "$var" '%s' "${!var:-$fallback}"
@@ -199,6 +218,7 @@ env_default AWS_SECRET_ACCESS_KEY ""
 env_default AWS_SESSION_TOKEN     ""
 env_default AWS_DEFAULT_REGION    ""
 env_default AWS_PROFILE           ""
+env_default MODEL_ID              ""
 
 # ── Validate environment ─────────────────────────────────────────
 ENV_ERRORS=0
@@ -232,7 +252,8 @@ if [[ "$MODEL_PROVIDER" == "ollama" ]]; then
     echo -e "  ${BOLD}Checking Ollama${RESET}"
     echo ""
 
-    if curl -sf "${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
+    OLLAMA_TAGS_CACHE=""
+    if OLLAMA_TAGS_CACHE="$(curl -sf "${OLLAMA_HOST}/api/tags" 2>/dev/null)"; then
         echo -e "  ${ARROW} Ollama                 ${PASS}  ${DIM}running at ${OLLAMA_HOST}${RESET}"
     else
         # Try to start ollama serve if the binary exists
@@ -245,7 +266,7 @@ if [[ "$MODEL_PROVIDER" == "ollama" ]]; then
 
             # Wait for Ollama to be ready
             for i in $(seq 1 15); do
-                if curl -sf "${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
+                if OLLAMA_TAGS_CACHE="$(curl -sf "${OLLAMA_HOST}/api/tags" 2>/dev/null)"; then
                     echo -e "  ${ARROW} Ollama                 ${PASS}  ${DIM}started${RESET}"
                     break
                 fi
@@ -270,7 +291,7 @@ if [[ "$MODEL_PROVIDER" == "ollama" ]]; then
 
             # Wait for Ollama to be ready
             for i in $(seq 1 20); do
-                if curl -sf "${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
+                if OLLAMA_TAGS_CACHE="$(curl -sf "${OLLAMA_HOST}/api/tags" 2>/dev/null)"; then
                     echo -e "  ${ARROW} Ollama                 ${PASS}  ${DIM}running via Docker${RESET}"
                     break
                 fi
@@ -288,9 +309,9 @@ if [[ "$MODEL_PROVIDER" == "ollama" ]]; then
         fi
     fi
 
-    # Check if the model is pulled
+    # Check if the model is pulled (reuse cached /api/tags response)
     echo -ne "  ${ARROW} Model ${OLLAMA_MODEL}     "
-    if curl -sf "${OLLAMA_HOST}/api/tags" 2>/dev/null | grep -q "\"${OLLAMA_MODEL}\""; then
+    if echo "$OLLAMA_TAGS_CACHE" | grep -q "\"${OLLAMA_MODEL}\""; then
         echo -e "${PASS}  ${DIM}available${RESET}"
     else
         echo -e "${YELLOW}pulling...${RESET}"
@@ -355,10 +376,12 @@ else
     [[ -n "${AWS_SESSION_TOKEN:-}" ]]     && export AWS_SESSION_TOKEN
     [[ -n "${AWS_DEFAULT_REGION:-}" ]]    && export AWS_DEFAULT_REGION
     [[ -n "${AWS_PROFILE:-}" ]]           && export AWS_PROFILE
+    [[ -n "${MODEL_ID:-}" ]]              && export MODEL_ID
 fi
 
+# Launch agent and Mercure concurrently, then health-check both
 echo -e "  ${ARROW} Python agent           ${DIM}http://localhost:${AGENT_PORT}${RESET}"
-cd "$PYTHON_AGENT_DIR"
+cd "$PYTHON_AGENT_DIR" || exit 1
 "$VENV_DIR/bin/uvicorn" api.server:app \
     --host 0.0.0.0 \
     --port "$AGENT_PORT" \
@@ -369,25 +392,13 @@ cd "$PYTHON_AGENT_DIR"
     done) \
     2>&1 &
 PIDS+=($!)
-cd "$REPO_ROOT"
-
-# Wait for agent to be ready
-for i in $(seq 1 15); do
-    if curl -sf "http://localhost:${AGENT_PORT}/health" >/dev/null 2>&1; then
-        echo -e "  ${ARROW} Python agent           ${PASS}  ${DIM}ready${RESET}"
-        break
-    fi
-    if [[ $i -eq 15 ]]; then
-        echo -e "  ${ARROW} Python agent           ${FAIL}  ${RED}failed to start${RESET}"
-        echo -e "     ${DIM}See log: ${AGENT_LOG}${RESET}"
-        cleanup
-    fi
-    sleep 1
-done
+cd "$REPO_ROOT" || exit 1
 
 # ── 3. Mercure (optional - for streaming mode) ─────────────────────
 # If MERCURE_URL is set in .env, start a Mercure Docker container
 # so the frontend can receive streamed tokens in real-time.
+# Launched in parallel with the agent to save startup time.
+MERCURE_LAUNCHED=false
 if [[ -n "$MERCURE_URL" && -n "$MERCURE_JWT_SECRET" ]]; then
     if ! command -v docker &>/dev/null; then
         echo -e "  ${YELLOW}${BOLD}Mercure skipped${RESET} ${DIM}- Docker not available (streaming disabled)${RESET}"
@@ -398,34 +409,16 @@ if [[ -n "$MERCURE_URL" && -n "$MERCURE_JWT_SECRET" ]]; then
         fi
 
         echo -e "  ${ARROW} Mercure                ${DIM}http://localhost:${MERCURE_PORT}${RESET}"
-        docker run -d --name goat-mercure-dev \
+        if docker run -d --name goat-mercure-dev \
             -p "${MERCURE_PORT}:${MERCURE_PORT}" \
             -e MERCURE_PUBLISHER_JWT_KEY="$MERCURE_JWT_SECRET" \
             -e MERCURE_SUBSCRIBER_JWT_KEY="$MERCURE_JWT_SECRET" \
             -e SERVER_NAME=":${MERCURE_PORT}" \
             -e "MERCURE_EXTRA_DIRECTIVES=anonymous
 cors_origins http://localhost:${APP_PORT}" \
-            dunglas/mercure >/dev/null 2>&1
-
-        if [[ $? -eq 0 ]]; then
+            dunglas/mercure >/dev/null 2>&1; then
+            MERCURE_LAUNCHED=true
             MERCURE_DOCKER=true
-
-            # Wait for Mercure to be ready
-            for i in $(seq 1 10); do
-                mercure_status=$(curl -so /dev/null -w "%{http_code}" \
-                    --connect-timeout 2 "http://localhost:${MERCURE_PORT}/.well-known/mercure" 2>/dev/null) || true
-                if [[ "$mercure_status" =~ ^(200|401|400)$ ]]; then
-                    echo -e "  ${ARROW} Mercure                ${PASS}  ${DIM}ready (streaming enabled)${RESET}"
-                    break
-                fi
-                if [[ $i -eq 10 ]]; then
-                    echo -e "  ${ARROW} Mercure                ${FAIL}  ${RED}failed to start${RESET}"
-                    echo -e "     ${DIM}Check: docker logs goat-mercure-dev${RESET}"
-                    echo -e "     ${DIM}Falling back to sync mode${RESET}"
-                    MERCURE_DOCKER=false
-                fi
-                sleep 1
-            done
         else
             echo -e "  ${ARROW} Mercure                ${FAIL}  ${RED}Docker run failed${RESET}"
             echo -e "     ${DIM}Falling back to sync mode${RESET}"
@@ -434,6 +427,44 @@ cors_origins http://localhost:${APP_PORT}" \
 else
     echo -e "  ${ARROW} Mercure                ${DIM}disabled (MERCURE_URL not set)${RESET}"
 fi
+
+# Interleaved health-check loop: poll agent and Mercure concurrently
+AGENT_READY=false
+MERCURE_READY=false
+[[ "$MERCURE_LAUNCHED" != "true" ]] && MERCURE_READY=true  # skip if not launched
+for i in $(seq 1 15); do
+    if [[ "$AGENT_READY" != "true" ]]; then
+        if curl -sf "http://localhost:${AGENT_PORT}/health" >/dev/null 2>&1; then
+            echo -e "  ${ARROW} Python agent           ${PASS}  ${DIM}ready${RESET}"
+            AGENT_READY=true
+        fi
+    fi
+    if [[ "$MERCURE_READY" != "true" ]]; then
+        mercure_status=$(curl -so /dev/null -w "%{http_code}" \
+            --connect-timeout 2 "http://localhost:${MERCURE_PORT}/.well-known/mercure" 2>/dev/null) || true
+        if [[ "$mercure_status" =~ ^(200|401|400)$ ]]; then
+            echo -e "  ${ARROW} Mercure                ${PASS}  ${DIM}ready (streaming enabled)${RESET}"
+            MERCURE_READY=true
+        fi
+    fi
+    # Both ready - break early
+    [[ "$AGENT_READY" == "true" && "$MERCURE_READY" == "true" ]] && break
+    # Timeout handling
+    if [[ $i -eq 15 ]]; then
+        if [[ "$AGENT_READY" != "true" ]]; then
+            echo -e "  ${ARROW} Python agent           ${FAIL}  ${RED}failed to start${RESET}"
+            echo -e "     ${DIM}See log: ${AGENT_LOG}${RESET}"
+            cleanup
+        fi
+        if [[ "$MERCURE_READY" != "true" ]]; then
+            echo -e "  ${ARROW} Mercure                ${FAIL}  ${RED}failed to start${RESET}"
+            echo -e "     ${DIM}Check: docker logs goat-mercure-dev${RESET}"
+            echo -e "     ${DIM}Falling back to sync mode${RESET}"
+            MERCURE_DOCKER=false
+        fi
+    fi
+    sleep 1
+done
 
 # ── 4. PHP Symfony ──────────────────────────────────────────────────
 # IMPORTANT: Do NOT export environment variables for Symfony here.
@@ -501,7 +532,8 @@ done
 echo ""
 echo -e "  ${DIM}$(printf '─%.0s' {1..44})${RESET}"
 echo ""
-echo -e "  ${GREEN}${BOLD}Ready!${RESET}  Open ${BOLD}http://localhost:${APP_PORT}${RESET} in your browser"
+STARTUP_ELAPSED=$(( SECONDS - STARTUP_START ))
+echo -e "  ${GREEN}${BOLD}Ready!${RESET} ${DIM}(${STARTUP_ELAPSED}s)${RESET}  Open ${BOLD}http://localhost:${APP_PORT}${RESET} in your browser"
 echo ""
 echo -e "  ${DIM}Services:${RESET}"
 echo -e "    ${ARROW} Chat UI:       ${BOLD}http://localhost:${APP_PORT}${RESET}"

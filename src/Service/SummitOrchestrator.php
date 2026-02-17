@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Psr\Log\LoggerInterface;
-use Strands\Context\AgentContext;
-use Strands\StrandsClient;
+use StrandsPhpClient\Context\AgentContext;
+use StrandsPhpClient\StrandsClient;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
@@ -50,7 +50,7 @@ class SummitOrchestrator
      * @param string|null $sessionId UUID for conversation continuity (null = one-shot, no memory)
      * @param string[]    $personas  Ordered list of persona names to invoke (e.g. ["gandalf", "terminator", "ships_cat"])
      *
-     * @return array<array{persona: string, text: string}> Responses in order
+     * @return array<array{persona: string, text: string, has_objective: bool}> Responses in order
      */
     public function deliberate(string $message, ?string $sessionId = null, array $personas = []): array
     {
@@ -109,6 +109,7 @@ class SummitOrchestrator
             $responses[] = [
                 'persona' => $persona,
                 'text' => $response->text,
+                'has_objective' => $response->hasObjective,
             ];
         }
 

@@ -8,8 +8,8 @@ use App\Service\SummitOrchestrator;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
-use Strands\Response\AgentResponse;
-use Strands\StrandsClient;
+use StrandsPhpClient\Response\AgentResponse;
+use StrandsPhpClient\StrandsClient;
 
 /**
  * Unit tests for SummitOrchestrator (sync mode).

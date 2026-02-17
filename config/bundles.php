@@ -18,6 +18,6 @@
 return [
     Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => ['all' => true],
     Symfony\Bundle\TwigBundle\TwigBundle::class => ['all' => true],
-    Strands\Integration\Symfony\StrandsBundle::class => ['all' => true],
+    StrandsPhpClient\Integration\Symfony\StrandsBundle::class => ['all' => true],
     Symfony\Bundle\MercureBundle\MercureBundle::class => ['all' => true],
 ];

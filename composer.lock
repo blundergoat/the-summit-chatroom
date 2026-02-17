@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "942e9bd1116446b1d4c9593f74c3f352",
+    "content-hash": "6d455c80fc2b81096367283c16662f1a",
     "packages": [
         {
             "name": "blundergoat/strands-php-client",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/blundergoat/strands-php-client.git",
-                "reference": "c0b8e7acb2d0f14df60f7c5ad4a553a275fe17c0"
+                "reference": "cf1ef835dafad0f219fd7f1518e123b594f52a9a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/blundergoat/strands-php-client/zipball/c0b8e7acb2d0f14df60f7c5ad4a553a275fe17c0",
-                "reference": "c0b8e7acb2d0f14df60f7c5ad4a553a275fe17c0",
+                "url": "https://api.github.com/repos/blundergoat/strands-php-client/zipball/cf1ef835dafad0f219fd7f1518e123b594f52a9a",
+                "reference": "cf1ef835dafad0f219fd7f1518e123b594f52a9a",
                 "shasum": ""
             },
             "require": {
@@ -28,6 +28,7 @@
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.0",
+                "illuminate/support": "^10.0 || ^11.0 || ^12.0",
                 "infection/infection": "^0.32.4",
                 "phpmd/phpmd": "^2.15",
                 "phpstan/phpstan": "^2.0",
@@ -37,22 +38,32 @@
                 "symfony/dependency-injection": "^6.4 || ^7.0",
                 "symfony/framework-bundle": "^6.4 || ^7.0",
                 "symfony/http-client": "^6.4 || ^7.0",
-                "symfony/yaml": "^6.4 || ^7.0"
+                "symfony/yaml": "^6.4 || ^7.0",
+                "vlucas/phpdotenv": "^5.6"
             },
             "suggest": {
-                "guzzlehttp/guzzle": "PSR-18 HTTP client — use with PsrHttpTransport for invoke() support without Symfony.",
+                "guzzlehttp/guzzle": "PSR-18 HTTP client -use with PsrHttpTransport for invoke() support without Symfony.",
+                "illuminate/support": "Required for Laravel service provider integration (^10.0|^11.0|^12.0)",
                 "symfony/framework-bundle": "Required for Symfony bundle integration (^6.4|^7.0)",
                 "symfony/http-client": "Required for SSE streaming support via SymfonyHttpTransport. Without it, only invoke() is available via PsrHttpTransport."
             },
             "type": "library",
             "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Strands": "StrandsPhpClient\\Integration\\Laravel\\Facades\\Strands"
+                    },
+                    "providers": [
+                        "StrandsPhpClient\\Integration\\Laravel\\StrandsServiceProvider"
+                    ]
+                },
                 "branch-alias": {
-                    "dev-main": "1.0.x-dev"
+                    "dev-main": "1.1.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Strands\\": "src/"
+                    "StrandsPhpClient\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -71,16 +82,21 @@
                 "Agent",
                 "ai",
                 "bedrock",
+                "laravel",
                 "llm",
+                "php",
+                "psr-18",
+                "sdk",
                 "sse",
                 "strands",
-                "streaming"
+                "streaming",
+                "symfony"
             ],
             "support": {
                 "issues": "https://github.com/blundergoat/strands-php-client/issues",
                 "source": "https://github.com/blundergoat/strands-php-client"
             },
-            "time": "2026-02-16T10:32:22+00:00"
+            "time": "2026-02-17T08:58:21+00:00"
         },
         {
             "name": "lcobucci/jwt",
@@ -8594,9 +8610,7 @@
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": {
-        "blundergoat/strands-php-client": 20
-    },
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
