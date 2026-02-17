@@ -130,13 +130,6 @@ the-summit-chatroom/
 | [Terraform](docs/terraform.md) | Terraform backend setup, first-time bootstrap, quick reference |
 | [Workflow](docs/workflow.md) | Claude Code hooks, skills, and workflow rules |
 
-## Related Repos
-
-| Repo | What |
-|------|------|
-| [strands-php-client](https://github.com/blundergoat/strands-client) | PHP client library for Strands agents (on Packagist) |
-| [strands-symfony-bundle](https://github.com/blundergoat/strands-bundle) | Symfony bundle for DI wiring |
-
 ## License
 
 Apache 2.0
