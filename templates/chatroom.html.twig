@@ -224,7 +224,16 @@
     </style>
 </head>
 
-<body class="bg-chatbg overflow-hidden flex" style="height: 100dvh">
+<body class="bg-chatbg overflow-hidden flex" style="height: 100vh; height: 100dvh">
+    <script>
+        // Mobile viewport fix — 100vh doesn't account for browser chrome on mobile.
+        // This sets a CSS variable to the actual visible height via window.innerHeight.
+        function fixMobileVh() {
+            document.body.style.height = window.innerHeight + 'px';
+        }
+        fixMobileVh();
+        window.addEventListener('resize', fixMobileVh);
+    </script>
 
     {# Mobile sidebar backdrop #}
     <div id="sidebarBackdrop" onclick="closeSidebar()"></div>
@@ -323,7 +332,7 @@
         </div>
 
         {# INPUT AREA #}
-        <footer class="px-4 pt-0 pb-6 max-md:pb-3">
+        <footer class="px-4 pt-0 pb-6 max-md:pb-2 flex-shrink-0">
             <form onsubmit="sendMessage(event)"
                   class="input-form bg-inputbg rounded-lg flex items-end border border-input-border transition-colors">
                 <input
@@ -346,6 +355,9 @@
                     </svg>
                 </button>
             </form>
+            <div class="md:hidden text-center pt-1">
+                <a href="https://www.blundergoat.com" target="_blank" rel="noopener" class="text-[10px] hover:underline" style="color: var(--c-text-faint)">created by BlunderGOAT</a>
+            </div>
         </footer>
     </div>
 

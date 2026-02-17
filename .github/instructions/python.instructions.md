@@ -52,9 +52,12 @@ strands_agents/
 
 The PHP `StrandsClient` sends requests to these endpoints:
 
-- `POST /invoke` — Synchronous: returns `{ "output": { "text": "..." } }`
+- `POST /invoke` — Synchronous: returns an `InvokeResponse`:
+  ```json
+  { "text": "...", "agent": "angry_chef", "session_id": "uuid", "has_objective": false, "usage": {}, "tools_used": [] }
+  ```
 - `POST /stream` — Streaming: returns SSE events ending with `complete` or `error`
-- `GET /health` — Returns `{ "status": "healthy" }`
+- `GET /health` — Returns `{ "status": "ok" }`
 
 Request body:
 ```json
