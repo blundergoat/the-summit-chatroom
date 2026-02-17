@@ -224,7 +224,7 @@
     </style>
 </head>
 
-<body class="bg-chatbg h-screen overflow-hidden flex">
+<body class="bg-chatbg overflow-hidden flex" style="height: 100dvh">
 
     {# Mobile sidebar backdrop #}
     <div id="sidebarBackdrop" onclick="closeSidebar()"></div>
@@ -233,9 +233,14 @@
     <aside id="personaSidebar" class="w-72 bg-sidebar flex flex-col flex-shrink-0">
 
         {# Sidebar header #}
-        <div class="h-12 px-4 flex items-center gap-2.5 shadow-sm" style="border-bottom: 1px solid var(--c-sidebar-border)">
-            <img src="/images/blundergoat-avatar.jpg" alt="Blunder Goat" class="w-7 h-7 rounded-full ring-2 ring-orange-500/40 flex-shrink-0">
-            <h1 class="font-bold text-base tracking-wide truncate" style="color: var(--c-text-primary)">The Summit</h1>
+        <div class="px-4 shadow-sm" style="border-bottom: 1px solid var(--c-sidebar-border)">
+            <div class="h-12 flex items-center gap-2.5">
+                <img src="/images/blundergoat-avatar.jpg" alt="Blunder Goat" class="w-7 h-7 rounded-full ring-2 ring-orange-500/40 flex-shrink-0">
+                <h1 class="font-bold text-base tracking-wide truncate" style="color: var(--c-text-primary)">The Summit</h1>
+            </div>
+            <a href="https://www.blundergoat.com" target="_blank" rel="noopener" class="block text-[11px] pb-2 -mt-1 hover:underline transition-colors" style="color: var(--c-text-faint); padding-left: 37px;">
+                created by BlunderGOAT
+            </a>
         </div>
 
         {# Channel / room name #}
@@ -270,6 +275,7 @@
                 <div class="text-xs truncate" style="color: var(--c-text-muted)">Online</div>
             </div>
         </div>
+
     </aside>
 
     {# MAIN CHAT AREA #}
@@ -317,7 +323,7 @@
         </div>
 
         {# INPUT AREA #}
-        <footer class="px-4 pt-0 pb-6">
+        <footer class="px-4 pt-0 pb-6 max-md:pb-3">
             <form onsubmit="sendMessage(event)"
                   class="input-form bg-inputbg rounded-lg flex items-end border border-input-border transition-colors">
                 <input
@@ -734,7 +740,7 @@
             const container = document.getElementById('messageContainer');
             const div = document.createElement('div');
             div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
-            const objectiveRing = hasObjective ? 'border: 1.5px solid #000000;' : '';
+            const objectiveRing = hasObjective ? 'border: 1px solid #000000;' : '';
             div.innerHTML = `
                 <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25; ${objectiveRing}">${config.icon}</div>
                 <div class="flex-1 min-w-0">

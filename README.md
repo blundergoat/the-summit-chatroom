@@ -1,31 +1,51 @@
 # The Summit
 
-Multi-agent group chat where three AI advisors - **Analyst**, **Skeptic**, and **Strategist** - debate your decisions. Built with [strands-php-client](https://github.com/blundergoat/strands-client) + [strands-symfony-bundle](https://github.com/blundergoat/strands-bundle).
+Multi-agent group chat where AI characters debate your questions. Three characters are randomly selected per session from a roster of 10 distinct personalities. Built with [strands-php-client](https://github.com/blundergoat/strands-client) + [strands-symfony-bundle](https://github.com/blundergoat/strands-bundle).
 
-*"Your decision, cross-examined by three minds that disagree on purpose."*
+*"Your question, cross-examined by three characters who disagree on purpose."*
 
 ## How It Works
 
-You ask a question. Three agents respond in sequence:
+You ask a question. Three characters are randomly drawn from a roster of 10 and respond in sequence, each seeing what the others said:
 
-1. **Analyst** (blue) - quantifies the landscape with data, baselines, and confidence bands
-2. **Skeptic** (amber) - challenges assumptions, demands evidence, runs premortems
-3. **Strategist** (green) - synthesises both into an actionable recommendation
+| Character | Personality |
+|-----------|-------------|
+| Angry Chef | Gordon Ramsay on a bad day. Everything is raw, overcooked, or a bloody disgrace. |
+| Medieval Knight | Old English flair. Honour, quests, and chivalry. |
+| Gandalf | Cryptic wisdom and ominous warnings. A wizard arrives precisely when he means to. |
+| Your Nan | Worries you're not eating. Everything relates to 1974. |
+| Terminator | Cold, logical, robotic. Assesses threats and calculates probabilities. |
+| Film Noir Detective | Hardboiled 1940s cynicism. The city is always dark, dames are trouble. |
+| Kindergarten Teacher | Explains everything to five-year-olds. Gold stars for good ideas. |
+| Roman Emperor | Imperial authority. Everything is for the glory of Rome. |
+| Infomercial Host | Everything is the GREATEST thing ever. BUT WAIT, THERE'S MORE. |
+| Ship's Cat | Judges humans from a cat's perspective. Would rather be sleeping. |
 
-Each agent sees the full conversation history, including what the other agents said. The Skeptic challenges the Analyst's numbers. The Strategist weighs both perspectives. It's a real debate, not three disconnected monologues.
+Sometimes one character gets a secret objective — a hidden side mission injected into their prompt that amplifies their personality. The other two play it straight, creating comedic contrast.
 
 ## Quick Start
+
+### Docker Compose (recommended)
 
 ```bash
 git clone https://github.com/blundergoat/the-summit-chatroom.git
 cd the-summit-chatroom
 cp .env.example .env
-docker-compose up --build
+docker compose up --build
 ```
 
-Open http://localhost:8080 and ask a question.
+Open http://localhost:8082 and ask a question.
 
-The first run downloads the LLM model (~9GB for `qwen2.5:14b`). Subsequent starts are fast.
+First run downloads the LLM model (~9GB for `qwen2.5:14b`). Subsequent starts are fast.
+
+### Bare-metal (for development)
+
+```bash
+./scripts/setup-initial.sh
+./scripts/start-dev.sh
+```
+
+Open http://localhost:8082. See [docs/local-development.md](docs/local-development.md) for details.
 
 ## Requirements
 
@@ -37,22 +57,31 @@ No cloud accounts or API keys needed for local development.
 
 ## Architecture
 
-```
-docker-compose up
-  |
-  ├── ollama        (local LLM server - no cloud needed)
-  ├── agent         (Python - Strands SDK + FastAPI + persona routing)
-  ├── app           (PHP - Symfony + strands-php-client + Twig chat UI)
-  └── mercure       (real-time streaming via SSE)
+```mermaid
+graph LR
+    Browser -->|":8082"| App["PHP Symfony<br/>Chat UI + Orchestrator"]
+    App -->|":8081"| Agent["Python FastAPI<br/>Strands SDK + Persona routing"]
+    Agent -->|":11434"| LLM["Ollama<br/>(or AWS Bedrock)"]
+    App -.->|":3100"| Mercure["Mercure<br/>SSE hub"]
+    Mercure -.->|"EventSource"| Browser
 ```
 
-The PHP app talks to the Python agent over HTTP. The agent talks to Ollama (or AWS Bedrock) for inference. Mercure handles real-time token streaming to the browser.
+The PHP app orchestrates the summit: it calls the Python agent three times in sequence (once per character), passing the persona name as metadata. The agent selects the matching system prompt and calls the LLM. Mercure enables real-time token streaming to the browser.
+
+### Docker Compose Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| **app** | 8082 | PHP Symfony chat UI and orchestration |
+| **agent** | 8081 | Python FastAPI agent with Strands SDK |
+| **ollama** | 11434 | Local LLM server |
+| **mercure** | 3100 | Real-time SSE hub for streaming mode |
 
 ## Model Provider
 
 Defaults to **Ollama** (local, free). Switch to **AWS Bedrock** by editing `.env`:
 
-```bash
+```env
 # Local (default)
 MODEL_PROVIDER=ollama
 OLLAMA_MODEL=qwen2.5:14b
@@ -61,33 +90,45 @@ OLLAMA_MODEL=qwen2.5:14b
 MODEL_PROVIDER=bedrock
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
+MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0
 ```
 
 ## Modes
 
-**Sync mode** (Milestone 4) - User sends message, waits ~30s, gets all three responses at once. Works now.
+**Sync mode** — User sends message, waits for all three characters to respond sequentially. Works with both Docker and bare-metal.
 
-**Streaming mode** (Milestone 5) - Agents stream token-by-token via Mercure. Text appears in real-time like a group chat. Requires Mercure container.
+**Streaming mode** — Characters stream token-by-token via Mercure. Text appears in real-time like a group chat. Requires the Mercure container (Docker Compose has it by default).
 
 ## Project Structure
 
 ```
 the-summit-chatroom/
+├── src/                    # PHP Symfony app
+│   ├── Controller/         # ChatController (routes requests)
+│   └── Service/            # SummitOrchestrator + SummitStreamOrchestrator
+├── templates/              # Twig chat UI (chatroom.html.twig)
 ├── strands_agents/         # Python agent
-│   ├── Dockerfile          # Agent container build
-│   ├── requirements.txt    # Python dependencies
-│   └── multi_persona_chat/ # Agent source code (server.py, agent.py, session.py)
-├── app/                    # Symfony app container
-│   ├── src/Controller/     # ChatController
-│   ├── src/Service/        # Orchestrators (sync + streaming)
-│   └── templates/          # Twig chat UI
-├── docker-compose.yml
-└── .env.example
+│   ├── api/server.py       # FastAPI HTTP layer
+│   ├── agents/             # Persona system prompts + agent creation
+│   ├── session.py          # In-memory conversation history
+│   └── persona_objectives.py # Secret objectives system
+├── config/                 # Symfony + Strands service wiring
+├── tests/                  # PHPUnit tests
+├── scripts/                # Dev scripts (start, deploy, terraform, preflight)
+├── infra/terraform/        # AWS infrastructure (ECS Fargate, ALB, WAF)
+├── docker-compose.yml      # Local dev stack
+└── docs/                   # Detailed documentation
 ```
 
-## Deploying to AWS
+## Documentation
 
-This repo includes a reference architecture for deploying the Python agent to AWS - see [`03-strands-agent-stack.md`](03-strands-agent-stack.md) for the full spec (Fargate, API Gateway, DynamoDB sessions). Most users will bring their own infrastructure; the spec is a guide, not a required dependency.
+| Doc | Contents |
+|-----|----------|
+| [Local Development](docs/local-development.md) | Docker Compose and bare-metal setup, environment config, troubleshooting |
+| [Deployment](docs/deployment.md) | deploy.sh and terraform.sh usage, deployment flow |
+| [Infrastructure](docs/infrastructure.md) | AWS architecture, Terraform modules, CI/CD, cost estimate |
+| [Terraform](docs/terraform.md) | Terraform backend setup, first-time bootstrap, quick reference |
+| [Workflow](docs/workflow.md) | Claude Code hooks, skills, and workflow rules |
 
 ## Related Repos
 
