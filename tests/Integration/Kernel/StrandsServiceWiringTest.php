@@ -7,7 +7,7 @@ namespace App\Tests\Integration\Kernel;
 use App\Controller\ChatController;
 use App\Kernel;
 use PHPUnit\Framework\TestCase;
-use Strands\StrandsClient;
+use StrandsPhpClient\StrandsClient;
 
 class StrandsServiceWiringTest extends TestCase
 {

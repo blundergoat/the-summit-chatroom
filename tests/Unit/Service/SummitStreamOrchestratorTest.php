@@ -8,9 +8,9 @@ use App\Service\SummitStreamOrchestrator;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
-use Strands\StrandsClient;
-use Strands\Streaming\StreamEvent;
-use Strands\Streaming\StreamEventType;
+use StrandsPhpClient\StrandsClient;
+use StrandsPhpClient\Streaming\StreamEvent;
+use StrandsPhpClient\Streaming\StreamEventType;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 

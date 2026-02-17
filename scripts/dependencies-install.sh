@@ -89,9 +89,6 @@ if [[ "$DO_PHP" == true ]]; then
     if ! command -v composer &>/dev/null; then
         step "composer"
         fail "not found - install from https://getcomposer.org"
-    elif [[ ! -f "$REPO_ROOT/../strands-php-client/composer.json" ]]; then
-        step "strands-php-client"
-        fail "missing at ../strands-php-client - required by composer.json"
     else
         step "composer install"
         install_output=$(cd "$REPO_ROOT" && composer install 2>&1)
