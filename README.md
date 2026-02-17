@@ -1,6 +1,6 @@
 # The Summit
 
-Multi-agent group chat where AI characters debate your questions. Three characters are randomly selected per session from a roster of 10 distinct personalities. Built with [strands-php-client](https://github.com/blundergoat/strands-client) + [strands-symfony-bundle](https://github.com/blundergoat/strands-bundle).
+Multi-agent group chat where AI characters debate your questions. Three characters are randomly selected per session from a roster of 10 distinct personalities. Built with [strands-php-client](https://github.com/blundergoat/strands-php-client).
 
 *"Your question, cross-examined by three characters who disagree on purpose."*
 
@@ -129,13 +129,6 @@ the-summit-chatroom/
 | [Infrastructure](docs/infrastructure.md) | AWS architecture, Terraform modules, CI/CD, cost estimate |
 | [Terraform](docs/terraform.md) | Terraform backend setup, first-time bootstrap, quick reference |
 | [Workflow](docs/workflow.md) | Claude Code hooks, skills, and workflow rules |
-
-## Related Repos
-
-| Repo | What |
-|------|------|
-| [strands-php-client](https://github.com/blundergoat/strands-client) | PHP client library for Strands agents (on Packagist) |
-| [strands-symfony-bundle](https://github.com/blundergoat/strands-bundle) | Symfony bundle for DI wiring |
 
 ## License
 

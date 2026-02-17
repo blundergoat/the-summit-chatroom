@@ -90,10 +90,6 @@ A single `StrandsClient` is injected via `#[Autowire(service: 'strands.client.su
 - Cyclomatic complexity max 20
 - Coverage minimum 80% (enforced by `preflight:coverage`)
 
-## Dependencies
-
-The `blundergoat/strands-client` package is a **local path dependency** at `../strands-php-client`. It must be present as a sibling directory for composer install to work.
-
 ## Environment
 
 Copy `.env.example` to `.env`. Key variables:
