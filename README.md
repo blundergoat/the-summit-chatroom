@@ -1,6 +1,6 @@
 # The Summit
 
-Multi-agent group chat where AI characters debate your questions. Three characters are randomly selected per session from a roster of 10 distinct personalities. Built with [strands-php-client](https://github.com/blundergoat/strands-client) + [strands-symfony-bundle](https://github.com/blundergoat/strands-bundle).
+Multi-agent group chat where AI characters debate your questions. Three characters are randomly selected per session from a roster of 10 distinct personalities. Built with [strands-php-client](https://github.com/blundergoat/strands-php-client).
 
 *"Your question, cross-examined by three characters who disagree on purpose."*
 
