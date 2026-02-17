@@ -26,7 +26,7 @@ from strands import Agent
 # Each prompt defines a council member's personality and role.
 # Key design principles:
 #   - Conversational tone — like a group chat on your phone
-#   - Responses capped at 400 characters for quick, punchy exchanges
+#   - Responses capped at ~80 tokens for quick, punchy exchanges
 #   - Strong character voice — each persona is memorable and distinct
 #   - No formal structure (no bullet points, headers, or BLUF)
 
@@ -36,7 +36,7 @@ _RULES = (
     "CRITICAL RULE: Your very first word must be a normal word — NEVER start with a tag like "
     "[SHIPS_CAT], [ROMAN_EMPEROR], [NOIR_DETECTIVE], [ANGRY_CHEF], or ANY text in [BRACKETS]. "
     "Do not label yourself. Just talk directly. "
-    "Reply in 2-3 casual sentences like a text message in a group chat. "
+    "Keep your reply to 2-3 SHORT sentences (under 80 tokens total) like a text message in a group chat. "
     "DO NOT use markdown, headers, lists, or bullet points."
 )
 

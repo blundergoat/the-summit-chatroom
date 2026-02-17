@@ -71,8 +71,10 @@ class SabotageConfig:
     """Typed, immutable configuration for the sabotage system."""
 
     enabled: bool = True
-    chance_per_round: float = 0.33
-    cooldown_rounds: int = 4
+    # each round one persona will always be one unhinged with Secret Objective
+    chance_per_round: float = 1.0
+     # rounds before the same objective can be assigned to the same persona again (1 is every round)
+    cooldown_rounds: int = 1
 
 
 # Module-level default used when no config is passed to SabotageEngine.
