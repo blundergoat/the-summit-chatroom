@@ -49,7 +49,7 @@ Severity levels control weighting (higher weight = more likely to be picked):
 import logging
 import random
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +57,26 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # =============================================================================
 
-SABOTAGE_CONFIG = {
-    "enabled": True,
-    "chance_per_round": 0.33,
-    "max_active_per_round": 1,
-    "duration_messages": 2,
-    "cooldown_rounds": 4,
+# Valid severity levels and their allowed weight ranges.
+# Higher weight = more likely to be picked by weighted random selection.
+SEVERITY_WEIGHT_RANGES: dict[str, tuple[int, int]] = {
+    "soft": (4, 6),
+    "medium": (2, 3),
+    "hard": (1, 2),
 }
+
+
+@dataclass(frozen=True)
+class SabotageConfig:
+    """Typed, immutable configuration for the sabotage system."""
+
+    enabled: bool = True
+    chance_per_round: float = 1.0  # TODO: revert to 0.33 after testing red border
+    cooldown_rounds: int = 4
+
+
+# Module-level default used when no config is passed to SabotageEngine.
+DEFAULT_CONFIG = SabotageConfig()
 
 
 # =============================================================================
@@ -79,8 +92,21 @@ class Objective:
     severity: str  # "soft", "medium", "hard"
     weight: int
     prompt: str
-    compatible_personas: list[str]  # Persona keys this objective works with
+    compatible_personas: list[str] | None  # Persona keys, or None = universal
     signature_for: str | None = None  # If set, this is the signature objective for this persona
+
+    def __post_init__(self) -> None:
+        if self.severity not in SEVERITY_WEIGHT_RANGES:
+            raise ValueError(
+                f"Invalid severity '{self.severity}' on objective '{self.id}', "
+                f"must be one of: {list(SEVERITY_WEIGHT_RANGES)}"
+            )
+        min_w, max_w = SEVERITY_WEIGHT_RANGES[self.severity]
+        if not (min_w <= self.weight <= max_w):
+            raise ValueError(
+                f"Weight {self.weight} out of range for severity '{self.severity}' "
+                f"on objective '{self.id}' (expected {min_w}-{max_w})"
+            )
 
 
 @dataclass
@@ -89,7 +115,6 @@ class RoundDecision:
 
     saboteur: str | None = None  # Persona key of the sabotaged character, or None
     objective: Objective | None = None
-    messages_remaining: int = 0
 
 
 # =============================================================================
@@ -368,7 +393,7 @@ OBJECTIVES: list[Objective] = [
             "before snapping back to yourself, confused. Stay in character after "
             "recovering. Still answer the question."
         ),
-        compatible_personas=[],  # Empty = compatible with ALL characters
+        compatible_personas=None,  # None = compatible with ALL characters
     ),
 ]
 
@@ -383,10 +408,13 @@ class SabotageEngine:
     One instance is shared across all requests in the FastAPI server (like
     the SessionStore). It tracks round decisions by correlation_id and
     cooldown history by session_id.
+
+    Memory is bounded: stale round decisions and cooldown history are pruned
+    at the start of each new round.
     """
 
-    def __init__(self, config: dict | None = None) -> None:
-        self._config = config or SABOTAGE_CONFIG
+    def __init__(self, config: SabotageConfig | None = None) -> None:
+        self._config = config or DEFAULT_CONFIG
         # Round decisions keyed by correlation_id (one decision per round)
         self._round_decisions: dict[str, RoundDecision] = {}
         # Cooldown history per session: list of (persona, objective_id, round_number)
@@ -418,7 +446,7 @@ class SabotageEngine:
         Returns:
             The objective prompt text to append to the system prompt, or None.
         """
-        if not self._config.get("enabled", True):
+        if not self._config.enabled:
             return None
 
         # First request for a new correlation_id triggers the round decision
@@ -427,15 +455,9 @@ class SabotageEngine:
 
         decision = self._round_decisions[correlation_id]
 
-        # Not this persona's turn to be sabotaged
         if decision.saboteur != persona or decision.objective is None:
             return None
 
-        # Check duration limit
-        if decision.messages_remaining <= 0:
-            return None
-
-        decision.messages_remaining -= 1
         return decision.objective.prompt
 
     def _make_round_decision(
@@ -448,9 +470,10 @@ class SabotageEngine:
 
         This is called exactly once per round (per correlation_id). It:
           1. Increments the round counter for the session
-          2. Rolls against chance_per_round
-          3. Picks a saboteur and objective (if triggered)
-          4. Stores the decision for the rest of the round
+          2. Prunes stale data from previous rounds
+          3. Rolls against chance_per_round
+          4. Picks a saboteur and objective (if triggered)
+          5. Stores the decision for the rest of the round
         """
         # Increment round counter if this is a new correlation_id for this session
         if correlation_id not in self._session_correlation_ids[session_id]:
@@ -459,8 +482,11 @@ class SabotageEngine:
 
         round_number = self._session_round_counter[session_id]
 
+        # Prune stale data now that a new round has started
+        self._prune_session(session_id, correlation_id, round_number)
+
         # Roll against chance_per_round
-        if random.random() > self._config["chance_per_round"]:
+        if random.random() > self._config.chance_per_round:
             self._round_decisions[correlation_id] = RoundDecision()
             logger.info(
                 "sabotage.round.skipped",
@@ -475,7 +501,7 @@ class SabotageEngine:
         compatible = self._get_compatible_objectives(saboteur)
 
         # Apply cooldown filter — remove objectives used by this persona recently
-        cooldown = self._config["cooldown_rounds"]
+        cooldown = self._config.cooldown_rounds
         history = self._session_history[session_id]
         recent_objectives = {
             obj_id
@@ -504,7 +530,6 @@ class SabotageEngine:
         self._round_decisions[correlation_id] = RoundDecision(
             saboteur=saboteur,
             objective=objective,
-            messages_remaining=self._config["duration_messages"],
         )
 
         # Record usage for cooldown tracking
@@ -523,16 +548,41 @@ class SabotageEngine:
             },
         )
 
+    def _prune_session(
+        self,
+        session_id: str,
+        current_correlation_id: str,
+        current_round: int,
+    ) -> None:
+        """Remove stale round decisions and trim cooldown history.
+
+        Called at the start of each new round. By the time a new correlation_id
+        arrives, all 3 personas from the previous round have already queried,
+        so previous round decisions are safe to discard.
+        """
+        # Remove old round decisions — keep only the current correlation_id
+        stale_ids = self._session_correlation_ids[session_id] - {current_correlation_id}
+        for cid in stale_ids:
+            self._round_decisions.pop(cid, None)
+        self._session_correlation_ids[session_id] = {current_correlation_id}
+
+        # Trim cooldown history to only entries within the cooldown window
+        cooldown = self._config.cooldown_rounds
+        self._session_history[session_id] = [
+            entry for entry in self._session_history[session_id]
+            if current_round - entry[2] <= cooldown
+        ]
+
     def _get_compatible_objectives(self, persona: str) -> list[Objective]:
         """Get all objectives compatible with a persona.
 
         An objective is compatible if:
           - Its compatible_personas list includes this persona, OR
-          - Its compatible_personas list is empty (universal objective)
+          - Its compatible_personas is None (universal objective)
         """
         return [
             obj for obj in OBJECTIVES
-            if not obj.compatible_personas or persona in obj.compatible_personas
+            if obj.compatible_personas is None or persona in obj.compatible_personas
         ]
 
     @staticmethod

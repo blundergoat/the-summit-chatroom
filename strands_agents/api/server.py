@@ -347,11 +347,15 @@ async def stream(req: InvokeRequest):
                 canonical = map_sdk_event(sdk_event)
                 if canonical:
                     # Known structured event — forward it as SSE
-                    yield f"data: {json.dumps(canonical)}\n\n"
                     if canonical.get("type") == "text":
                         full_text += canonical.get("content", "")
-                    if canonical.get("type") in ("complete", "error"):
+                    if canonical.get("type") == "complete":
+                        # Inject has_objective — the SDK doesn't know about it
+                        canonical["has_objective"] = bool(objective_prompt)
                         got_terminal = True
+                    elif canonical.get("type") == "error":
+                        got_terminal = True
+                    yield f"data: {json.dumps(canonical)}\n\n"
                 elif isinstance(sdk_event, str):
                     # Plain string chunk from the SDK — wrap it as a "text" event
                     full_text += sdk_event

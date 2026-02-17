@@ -734,7 +734,7 @@
             const container = document.getElementById('messageContainer');
             const div = document.createElement('div');
             div.className = 'msg-row flex gap-4 py-2 px-4 -mx-4 rounded';
-            const objectiveRing = hasObjective ? 'border: 2px solid #ef4444;' : '';
+            const objectiveRing = hasObjective ? 'border: 1.5px solid #000000;' : '';
             div.innerHTML = `
                 <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl mt-0.5" style="background: ${config.borderColor}25; ${objectiveRing}">${config.icon}</div>
                 <div class="flex-1 min-w-0">
@@ -855,7 +855,7 @@
                         // Apply red ring if this persona had a secret objective
                         if (data.has_objective) {
                             const avatar = streamBubbles[persona].querySelector('.flex-shrink-0');
-                            if (avatar) avatar.style.border = '2px solid #ef4444';
+                            if (avatar) avatar.style.border = '1.5px solid #000000';
                         }
                         es.close();
                     } else if (data.type === 'error') {
