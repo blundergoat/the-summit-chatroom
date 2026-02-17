@@ -101,9 +101,6 @@ if [[ "$DO_PHP" == true ]]; then
     if ! command -v composer &>/dev/null; then
         step "composer"
         fail "not found"
-    elif [[ ! -f "$REPO_ROOT/../strands-php-client/composer.json" ]]; then
-        step "strands-php-client"
-        fail "missing at ../strands-php-client - required by composer.json"
     else
         step "composer update"
         update_output=$(cd "$REPO_ROOT" && composer update 2>&1)
