@@ -71,7 +71,7 @@ class SabotageConfig:
     """Typed, immutable configuration for the sabotage system."""
 
     enabled: bool = True
-    chance_per_round: float = 1.0  # TODO: revert to 0.33 after testing red border
+    chance_per_round: float = 0.33
     cooldown_rounds: int = 4
 
 

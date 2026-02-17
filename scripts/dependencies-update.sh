@@ -191,7 +191,7 @@ if [[ "$DO_PYTHON" == true ]]; then
             if [[ "$pkg_changed" -gt 0 ]]; then
                 pass "${pkg_changed} package(s) changed"
                 # Show old→new version for each changed package
-                diff <(echo "$before") <(echo "$after") | grep "^[<>]" | sed 's/^< //' | sed 's/^> //' | \
+                echo "$diff_output" | grep "^[<>]" | sed 's/^< //' | sed 's/^> //' | \
                     awk -F'==' '{packages[$1] = packages[$1] ? packages[$1] " → " $2 : $2} END {for (p in packages) print p "  " packages[p]}' | sort | \
                     while IFS= read -r line; do
                         echo -e "       ${DIM}${line}${RESET}"
