@@ -33,7 +33,7 @@ const PERSONAS = {
 /**
  * Initialize streaming chat - subscribes to Mercure topics and renders tokens in real-time.
  *
- * @param {string}      mercureUrl       The public Mercure hub URL (e.g., http://localhost:3100/.well-known/mercure)
+ * @param {string}      mercureUrl       The public Mercure hub URL (e.g., http://localhost:3701/.well-known/mercure)
  * @param {string}      sessionId        The session UUID for conversation continuity
  * @param {string}      topicBase        The base Mercure topic (e.g., "the-summit/abc-123")
  * @param {HTMLElement}  messageContainer The DOM element to append chat bubbles to

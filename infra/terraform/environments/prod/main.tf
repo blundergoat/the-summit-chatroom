@@ -11,20 +11,20 @@
 #        |
 #        v
 #   Application Load Balancer (public subnets, shared VPC)
-#        |--- /.well-known/mercure*  ---> Mercure target group (port 3100)
+#        |--- /.well-known/mercure*  ---> Mercure target group (port 3701)
 #        |--- default                ---> App target group (port 8080)
 #        |
 #        v
 #   ECS Fargate Task (private subnets, shared VPC)
 #     - App container (PHP Symfony, port 8080)      <-- ALB default target
 #     - Agent container (Python FastAPI, port 8000)  <-- internal sidecar
-#     - Mercure container (SSE hub, port 3100)       <-- ALB path-routed
+#     - Mercure container (SSE hub, port 3701)       <-- ALB path-routed
 #          |
 #          +-- AWS Bedrock (model invocation)
 #          +-- DynamoDB (session persistence)
 #
 # The App container serves the web UI and calls the Agent at localhost:8000
-# and publishes to Mercure at localhost:3100 for real-time streaming
+# and publishes to Mercure at localhost:3701 for real-time streaming
 # (same task, same network namespace -- no service discovery needed).
 #
 # MODULE DEPENDENCY ORDER:
@@ -84,13 +84,13 @@ locals {
 
   # Environment variables passed to the PHP app container.
   # The app calls the agent at localhost:8000 (same task, sidecar pattern).
-  # Mercure hub runs as a sidecar at localhost:3100 for real-time streaming.
+  # Mercure hub runs as a sidecar at localhost:3701 for real-time streaming.
   app_env = {
     APP_ENV            = "prod"
     APP_DEBUG          = "0"
     APP_SECRET         = random_password.app_secret.result
     AGENT_ENDPOINT     = "http://localhost:8000"
-    MERCURE_URL        = "http://localhost:3100/.well-known/mercure"
+    MERCURE_URL        = "http://localhost:3701/.well-known/mercure"
     MERCURE_PUBLIC_URL = "https://${var.subdomain}.${var.domain_name}/.well-known/mercure"
     MERCURE_JWT_SECRET = random_password.mercure_jwt_secret.result
   }
@@ -99,7 +99,7 @@ locals {
   mercure_env = {
     MERCURE_PUBLISHER_JWT_KEY  = random_password.mercure_jwt_secret.result
     MERCURE_SUBSCRIBER_JWT_KEY = random_password.mercure_jwt_secret.result
-    SERVER_NAME                = ":3100"
+    SERVER_NAME                = ":3701"
     MERCURE_EXTRA_DIRECTIVES   = "anonymous\ncors_origins https://${var.subdomain}.${var.domain_name}"
   }
 }
@@ -158,7 +158,7 @@ module "security" {
   vpc_id            = var.vpc_id
   alb_ingress_cidrs = var.alb_ingress_cidrs
   app_port          = 8080
-  mercure_port      = 3100
+  mercure_port      = 3701
   ecs_egress_cidrs  = var.ecs_egress_cidrs
   tags              = local.tags
 }

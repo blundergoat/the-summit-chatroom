@@ -55,7 +55,7 @@ Browser (Twig UI :8082)
     → SummitOrchestrator (sync) or SummitStreamOrchestrator (streaming)
       → Python FastAPI agent (:8000) with persona metadata
         → Ollama (:11434) or AWS Bedrock
-      ← Responses streamed back via Mercure (:3100) in streaming mode
+      ← Responses streamed back via Mercure (:3701) in streaming mode
 ```
 
 ### Two Execution Modes

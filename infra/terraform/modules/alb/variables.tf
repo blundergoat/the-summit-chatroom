@@ -73,7 +73,7 @@ variable "enable_mercure" {
 variable "mercure_target_port" {
   description = "Target port for the Mercure container"
   type        = number
-  default     = 3100
+  default     = 3701
 }
 
 variable "mercure_health_check_path" {

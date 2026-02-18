@@ -82,7 +82,7 @@ You are reviewing a multi-agent chat application with a PHP/Symfony backend, Pyt
 
 ### Docker / Infrastructure Changes
 - [ ] Service dependency chain preserved (healthchecks, depends_on)
-- [ ] Port mappings consistent with `scripts/start-dev.sh` defaults (8081, 8082, 11434, 3100)
+- [ ] Port mappings consistent with `scripts/start-dev.sh` defaults (8081, 8082, 11434, 3701)
 - [ ] Environment variables match between `docker-compose.yml` and `.env.example`
 - [ ] Local dev mode (`scripts/start-dev.sh`) still works without Docker
 

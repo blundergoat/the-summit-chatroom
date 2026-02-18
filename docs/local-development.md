@@ -57,7 +57,7 @@ graph LR
     Browser -->|":8082"| PHP["PHP Symfony<br/>Chat UI"]
     PHP -->|":8081"| Agent["Python FastAPI<br/>Agent"]
     Agent -->|":11434"| LLM["Ollama<br/>(or Bedrock)"]
-    PHP -.->|":3100"| Mercure["Mercure<br/>SSE hub"]
+    PHP -.->|":3701"| Mercure["Mercure<br/>SSE hub"]
     Mercure -.->|"EventSource"| Browser
 
     style Mercure stroke-dasharray: 5 5
@@ -74,7 +74,7 @@ Mercure is optional (Docker Compose only) — without it, the app falls back to 
 | **ollama** | ollama/ollama | 11434 | Local LLM server |
 | **ollama-pull** | ollama/ollama | — | One-shot model download, then exits |
 | **agent** | Built from `strands_agents/Dockerfile` | 8081 → 8000 | Python FastAPI agent (Strands SDK) |
-| **mercure** | dunglas/mercure | 3100 | Real-time SSE hub for streaming mode |
+| **mercure** | dunglas/mercure | 3701 | Real-time SSE hub for streaming mode |
 | **app** | Built from `Dockerfile` | 8082 → 8080 | PHP Symfony chat UI |
 
 Startup order: ollama → ollama-pull → agent → mercure → app
@@ -176,8 +176,8 @@ These are set automatically by `start-dev.sh` and `docker-compose.yml`. You typi
 |----------|-------------|-----------------|---------|
 | `AGENT_ENDPOINT` | `http://agent:8000` | `http://localhost:8081` | PHP → Python agent URL |
 | `OLLAMA_HOST` | `http://ollama:11434` | `http://localhost:11434` | Python agent → Ollama URL |
-| `MERCURE_URL` | `http://mercure:3100/...` | *(empty)* | PHP → Mercure publish URL |
-| `MERCURE_PUBLIC_URL` | `http://localhost:3100/...` | *(empty)* | Browser → Mercure subscribe URL |
+| `MERCURE_URL` | `http://mercure:3701/...` | *(empty)* | PHP → Mercure publish URL |
+| `MERCURE_PUBLIC_URL` | `http://localhost:3701/...` | *(empty)* | Browser → Mercure subscribe URL |
 | `MERCURE_JWT_SECRET` | `the-summit-mercure-secret` | *(empty)* | JWT signing for Mercure |
 | `APP_SECRET` | `the-summit-dev-secret-change-me` | same | Symfony CSRF/session secret |
 

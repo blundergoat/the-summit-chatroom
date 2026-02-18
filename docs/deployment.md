@@ -59,7 +59,7 @@ graph TB
                 subgraph Task["ECS Fargate Task"]
                     App["App<br/>PHP Symfony :8080"]
                     Agent["Agent<br/>Python FastAPI :8000"]
-                    Mercure["Mercure<br/>SSE hub :3100"]
+                    Mercure["Mercure<br/>SSE hub :3701"]
                 end
             end
         end
@@ -71,7 +71,7 @@ graph TB
     Browser --> R53
     R53 --> WAF --> ALB
     ALB -->|"/* → :8080"| App
-    ALB -->|"/.well-known/mercure → :3100"| Mercure
+    ALB -->|"/.well-known/mercure → :3701"| Mercure
     App -->|"localhost:8000"| Agent
     Agent --> Bedrock
     Agent --> DDB

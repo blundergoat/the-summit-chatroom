@@ -33,7 +33,7 @@
 #   http://localhost:8082  — The chat UI (PHP app)
 #   http://localhost:8081  — Python agent API (for debugging)
 #   http://localhost:11434 — Ollama API (for debugging)
-#   http://localhost:3100  — Mercure hub (for SSE subscriptions)
+#   http://localhost:3701  — Mercure hub (for SSE subscriptions)
 # =============================================================================
 
 services:
@@ -141,8 +141,8 @@ services:
       - APP_DEBUG=1                  # Enable Symfony debug toolbar
       - APP_SECRET=the-summit-dev-secret-change-me   # CHANGE THIS in production!
       - AGENT_ENDPOINT=http://agent:8000               # Python agent's Docker internal URL
-      - MERCURE_URL=http://mercure:3100/.well-known/mercure          # Internal Mercure URL (PHP -> Mercure)
-      - MERCURE_PUBLIC_URL=http://localhost:3100/.well-known/mercure  # Public Mercure URL (Browser -> Mercure)
+      - MERCURE_URL=http://mercure:3701/.well-known/mercure          # Internal Mercure URL (PHP -> Mercure)
+      - MERCURE_PUBLIC_URL=http://localhost:3701/.well-known/mercure  # Public Mercure URL (Browser -> Mercure)
       - MERCURE_JWT_SECRET=${MERCURE_JWT_SECRET:-the-summit-mercure-dev-secret-key}  # Must be ≥ 32 chars for HS256
     depends_on:
       agent:
@@ -164,7 +164,7 @@ services:
   # CONFIGURATION:
   #   MERCURE_PUBLISHER_JWT_KEY   — Secret for verifying publisher JWTs (must match app's MERCURE_JWT_SECRET)
   #   MERCURE_SUBSCRIBER_JWT_KEY  — Secret for verifying subscriber JWTs
-  #   SERVER_NAME: ":3100"        — Listen on port 3100
+  #   SERVER_NAME: ":3701"        — Listen on port 3701
   #   anonymous                   — Allow anonymous subscribers (no JWT needed to read)
   #   cors_origins                — Allow the PHP app's origin to connect (CORS)
   #
@@ -172,11 +172,11 @@ services:
   mercure:
     image: dunglas/mercure
     ports:
-      - "3100:3100"
+      - "3701:3701"
     environment:
       MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:-the-summit-mercure-dev-secret-key}
       MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:-the-summit-mercure-dev-secret-key}
-      SERVER_NAME: ":3100"
+      SERVER_NAME: ":3701"
       MERCURE_EXTRA_DIRECTIVES: |
         anonymous
         cors_origins http://localhost:8082
