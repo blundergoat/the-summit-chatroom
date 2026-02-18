@@ -18,8 +18,8 @@ class StrandsServiceWiringTest extends TestCase
         $this->setEnv('APP_ENV', 'test');
         $this->setEnv('APP_SECRET', 'test-secret-for-kernel-wiring');
         $this->setEnv('AGENT_ENDPOINT', 'http://localhost:8081');
-        $this->setEnv('MERCURE_URL', 'http://localhost:3100/.well-known/mercure');
-        $this->setEnv('MERCURE_PUBLIC_URL', 'http://localhost:3100/.well-known/mercure');
+        $this->setEnv('MERCURE_URL', 'http://localhost:3701/.well-known/mercure');
+        $this->setEnv('MERCURE_PUBLIC_URL', 'http://localhost:3701/.well-known/mercure');
         $this->setEnv('MERCURE_JWT_SECRET', 'test-mercure-secret-32chars-minimum');
     }
 

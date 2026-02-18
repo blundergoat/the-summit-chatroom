@@ -62,7 +62,7 @@ variable "mercure_container_name" {
 variable "mercure_container_port" {
   description = "Container port for the Mercure hub"
   type        = number
-  default     = 3100
+  default     = 3701
 }
 
 variable "tags" {

@@ -138,9 +138,9 @@ The ECS task runs 3 containers:
 |-----------|------|------|
 | **app** | 8080 | PHP/Symfony web UI |
 | **agent** | 8000 | Python/FastAPI AI agent layer |
-| **mercure** | 3100 | SSE hub for real-time streaming |
+| **mercure** | 3701 | SSE hub for real-time streaming |
 
-Traffic flow: Route53 -> ALB (HTTPS :443) -> ECS (app :8080, mercure :3100 via path-based routing)
+Traffic flow: Route53 -> ALB (HTTPS :443) -> ECS (app :8080, mercure :3701 via path-based routing)
 
 ## Troubleshooting
 

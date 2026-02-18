@@ -62,7 +62,7 @@ graph LR
     Browser -->|":8082"| App["PHP Symfony<br/>Chat UI + Orchestrator"]
     App -->|":8081"| Agent["Python FastAPI<br/>Strands SDK + Persona routing"]
     Agent -->|":11434"| LLM["Ollama<br/>(or AWS Bedrock)"]
-    App -.->|":3100"| Mercure["Mercure<br/>SSE hub"]
+    App -.->|":3701"| Mercure["Mercure<br/>SSE hub"]
     Mercure -.->|"EventSource"| Browser
 ```
 
@@ -75,7 +75,7 @@ The PHP app orchestrates the summit: it calls the Python agent three times in se
 | **app** | 8082 | PHP Symfony chat UI and orchestration |
 | **agent** | 8081 | Python FastAPI agent with Strands SDK |
 | **ollama** | 11434 | Local LLM server |
-| **mercure** | 3100 | Real-time SSE hub for streaming mode |
+| **mercure** | 3701 | Real-time SSE hub for streaming mode |
 
 ## Model Provider
 

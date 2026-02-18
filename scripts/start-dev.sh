@@ -9,12 +9,12 @@
 #   ollama (default):
 #     1. Ollama (auto-starts via binary or Docker if needed)
 #     2. Python FastAPI agent on port 8081
-#     3. Mercure hub on port 3100 (if MERCURE_URL is set in .env)
+#     3. Mercure hub on port 3701 (if MERCURE_URL is set in .env)
 #     4. PHP Symfony dev server on port 8082
 #
 #   bedrock:
 #     1. Python FastAPI agent on port 8081
-#     2. Mercure hub on port 3100 (if MERCURE_URL is set in .env)
+#     2. Mercure hub on port 3701 (if MERCURE_URL is set in .env)
 #     3. PHP Symfony dev server on port 8082
 #     (Requires AWS credentials - no local LLM needed)
 #
@@ -27,7 +27,7 @@
 #   MODEL_PROVIDER - LLM backend: 'ollama' (default) or 'bedrock'
 #   AGENT_PORT     - Python agent port (default: 8081)
 #   APP_PORT       - PHP app port (default: 8082)
-#   MERCURE_PORT   - Mercure hub port (default: 3100)
+#   MERCURE_PORT   - Mercure hub port (default: 3701)
 #   OLLAMA_HOST    - Ollama URL (default: http://localhost:11434)
 #   OLLAMA_MODEL   - Model name (default: from .env or qwen2.5:14b)
 #
@@ -43,7 +43,7 @@ VENV_DIR="$PYTHON_AGENT_DIR/.venv"
 # ── Configurable ports ──────────────────────────────────────────────
 AGENT_PORT="${AGENT_PORT:-8081}"
 APP_PORT="${APP_PORT:-8082}"
-MERCURE_PORT="${MERCURE_PORT:-3100}"
+MERCURE_PORT="${MERCURE_PORT:-3701}"
 
 # ── Colors ──────────────────────────────────────────────────────────
 RED='\033[0;31m'

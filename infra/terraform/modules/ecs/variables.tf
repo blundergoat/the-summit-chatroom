@@ -165,7 +165,7 @@ variable "mercure_container_name" {
 variable "mercure_container_port" {
   description = "Container port for the Mercure hub"
   type        = number
-  default     = 3100
+  default     = 3701
 }
 
 variable "log_group_name_mercure" {
@@ -183,5 +183,5 @@ variable "mercure_environment_variables" {
 variable "mercure_health_check_command" {
   description = "Mercure container health check command"
   type        = list(string)
-  default     = ["CMD-SHELL", "curl -f http://localhost:3100/healthz || exit 1"]
+  default     = ["CMD-SHELL", "curl -f http://localhost:3701/healthz || exit 1"]
 }
