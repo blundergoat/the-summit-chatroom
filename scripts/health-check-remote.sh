@@ -27,7 +27,7 @@ AWS_CLI="${SCRIPT_DIR}/aws-cli.sh"
 
 # AWS Resources
 ECS_CLUSTER="the-summit-cluster"
-ECS_SERVICE="the-summit-agent"
+ECS_SERVICE="the-summit-app"
 LOG_GROUP_AGENT="/ecs/the-summit-prod-agent"
 DYNAMODB_TABLE="the-summit-prod-sessions"
 SECRET_PATH="/the-summit/prod/api-key"

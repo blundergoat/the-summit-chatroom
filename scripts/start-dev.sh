@@ -170,6 +170,13 @@ if command -v lsof &>/dev/null; then
     done
 fi
 
+# Detect stale venv (e.g. repo moved and shebangs point to old path)
+if [[ -f "$VENV_DIR/bin/uvicorn" ]] && ! "$VENV_DIR/bin/uvicorn" --version &>/dev/null; then
+    echo -e "  ${YELLOW}${BOLD}Stale Python venv detected${RESET} (repo path may have changed)"
+    echo -e "    ${ARROW} Removing ${VENV_DIR} so it can be rebuilt..."
+    rm -rf "$VENV_DIR"
+fi
+
 # Check venv + vendor exist - install dependencies if missing
 if [[ ! -f "$VENV_DIR/bin/uvicorn" || ! -f "$REPO_ROOT/vendor/autoload.php" ]]; then
     echo -e "  ${YELLOW}${BOLD}Dependencies missing${RESET}"

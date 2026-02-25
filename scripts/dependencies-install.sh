@@ -115,8 +115,13 @@ if [[ "$DO_PYTHON" == true ]]; then
         step "python3"
         fail "not found"
     else
-        # Create venv if missing
+        # Create venv if missing or stale (e.g. repo moved and shebangs broke)
         step "Python venv"
+        if [[ -f "$VENV_DIR/bin/uvicorn" ]] && ! "$VENV_DIR/bin/uvicorn" --version &>/dev/null; then
+            rm -rf "$VENV_DIR"
+            echo -ne "\r"
+            step "Python venv"
+        fi
         if [[ -f "$VENV_DIR/bin/python" ]]; then
             pass "exists"
         else

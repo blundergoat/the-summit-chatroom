@@ -40,6 +40,12 @@ class ChatController extends AbstractController
     ) {
     }
 
+    #[Route('/health', name: 'health', methods: ['GET'])]
+    public function health(): JsonResponse
+    {
+        return $this->json(['status' => 'ok']);
+    }
+
     /**
      * GET / - Render the chat UI.
      */
