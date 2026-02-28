@@ -168,10 +168,10 @@ jobs:
           MAX_RETRIES=5
           RETRY_DELAY=10
 
-          echo "Checking agent health at ${API_URL}/health..."
+          echo "Checking health at ${API_URL}/..."
 
           for i in $(seq 1 $MAX_RETRIES); do
-            response=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health" || echo "000")
+            response=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/" || echo "000")
 
             if [ "$response" = "200" ]; then
               echo "Health check passed! Agent is responding."
