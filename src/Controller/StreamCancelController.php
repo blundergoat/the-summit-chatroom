@@ -20,7 +20,8 @@ class StreamCancelController extends AbstractController
     #[Route('/stream/cancel', name: 'stream_cancel', methods: ['POST'])]
     public function cancel(Request $request): JsonResponse
     {
-        $topic = $request->request->getString('topic');
+        $data = json_decode($request->getContent(), true);
+        $topic = is_array($data) && is_string($data['topic'] ?? null) ? $data['topic'] : '';
 
         if ($topic === '') {
             return $this->json(['error' => 'Topic is required'], 400);

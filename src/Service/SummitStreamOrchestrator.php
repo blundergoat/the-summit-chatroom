@@ -132,14 +132,10 @@ class SummitStreamOrchestrator
             'topic' => $topic,
         ]);
 
-        $eventCounts = [
-            'text' => 0,
-            'tool_use' => 0,
-            'tool_result' => 0,
-            'thinking' => 0,
-            'complete' => 0,
-            'error' => 0,
-        ];
+        $eventCounts = array_fill_keys(
+            array_map(static fn (StreamEventType $t): string => $t->value, StreamEventType::cases()),
+            0,
+        );
 
         try {
             $result = $this->strandsClient->stream(

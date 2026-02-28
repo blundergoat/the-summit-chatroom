@@ -53,7 +53,7 @@ class ChatController extends AbstractController
 
         return $this->render('chatroom.html.twig', [
             'mercure_url'       => $mercureUrl,
-            'streaming_enabled' => true,
+            'streaming_enabled' => $mercureUrl !== '',
         ]);
     }
 
