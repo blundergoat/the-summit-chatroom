@@ -8,14 +8,14 @@
 #
 #   ollama (default):
 #     1. Ollama (auto-starts via binary or Docker if needed)
-#     2. Python FastAPI agent on port 8081
-#     3. Mercure hub on port 3701 (if MERCURE_URL is set in .env)
-#     4. PHP Symfony dev server on port 8082
+#     2. Python FastAPI agent on port 8093
+#     3. Mercure hub on port 3712 (if MERCURE_URL is set in .env)
+#     4. PHP Symfony dev server on port 8094
 #
 #   bedrock:
-#     1. Python FastAPI agent on port 8081
-#     2. Mercure hub on port 3701 (if MERCURE_URL is set in .env)
-#     3. PHP Symfony dev server on port 8082
+#     1. Python FastAPI agent on port 8093
+#     2. Mercure hub on port 3712 (if MERCURE_URL is set in .env)
+#     3. PHP Symfony dev server on port 8094
 #     (Requires AWS credentials - no local LLM needed)
 #
 # Prerequisites:
@@ -25,11 +25,11 @@
 #
 # Environment:
 #   MODEL_PROVIDER - LLM backend: 'ollama' (default) or 'bedrock'
-#   AGENT_PORT     - Python agent port (default: 8081)
-#   APP_PORT       - PHP app port (default: 8082)
-#   MERCURE_PORT   - Mercure hub port (default: 3701)
+#   AGENT_PORT     - Python agent port (default: 8093)
+#   APP_PORT       - PHP app port (default: 8094)
+#   MERCURE_PORT   - Mercure hub port (default: 3712)
 #   OLLAMA_HOST    - Ollama URL (default: http://localhost:11434)
-#   OLLAMA_MODEL   - Model name (default: from .env or qwen2.5:14b)
+#   OLLAMA_MODEL   - Model name (default: from .env or qwen3:14b)
 #
 # Press Ctrl+C to stop all services.
 # =============================================================================
@@ -41,9 +41,9 @@ PYTHON_AGENT_DIR="$REPO_ROOT/strands_agents"
 VENV_DIR="$PYTHON_AGENT_DIR/.venv"
 
 # ── Configurable ports ──────────────────────────────────────────────
-AGENT_PORT="${AGENT_PORT:-8081}"
-APP_PORT="${APP_PORT:-8082}"
-MERCURE_PORT="${MERCURE_PORT:-3701}"
+AGENT_PORT="${AGENT_PORT:-8093}"
+APP_PORT="${APP_PORT:-8094}"
+MERCURE_PORT="${MERCURE_PORT:-3712}"
 
 # ── Colors ──────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -210,7 +210,7 @@ env_default() {
 }
 
 env_default MODEL_PROVIDER  "ollama"
-env_default OLLAMA_MODEL    "qwen2.5:14b"
+env_default OLLAMA_MODEL    "qwen3:14b"
 env_default OLLAMA_HOST     "http://localhost:11434"
 
 # Mercure vars - needed for streaming mode
@@ -329,12 +329,14 @@ if [[ "$MODEL_PROVIDER" == "ollama" ]]; then
                 echo -e "  ${ARROW} Model ${OLLAMA_MODEL}     ${PASS}  ${DIM}ready${RESET}"
             else
                 echo -e "  ${ARROW} Model ${OLLAMA_MODEL}     ${FAIL}  ${RED}pull failed${RESET}"
+                echo -e "     ${DIM}Run: ./scripts/setup-initial.sh${RESET}"
                 cleanup
             fi
         elif ollama pull "$OLLAMA_MODEL" 2>&1; then
             echo -e "  ${ARROW} Model ${OLLAMA_MODEL}     ${PASS}  ${DIM}ready${RESET}"
         else
             echo -e "  ${ARROW} Model ${OLLAMA_MODEL}     ${FAIL}  ${RED}pull failed${RESET}"
+            echo -e "     ${DIM}Run: ./scripts/setup-initial.sh${RESET}"
             cleanup
         fi
     fi
@@ -509,6 +511,7 @@ php -S "0.0.0.0:${APP_PORT}" -t "$REPO_ROOT/public" \
         # [info], HTTP status lines, and server startup/shutdown messages
         case "$line" in
             *"[debug]"*) ;;  # skip debug lines on console
+            *"[info]"*".well-known/mercure"*) ;;  # skip Mercure publish noise
             *) echo -e "    ${GREEN}[php]${RESET}   $line" ;;
         esac
     done) \

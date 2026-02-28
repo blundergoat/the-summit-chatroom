@@ -18,7 +18,7 @@
 #
 # Options:
 #   --port PORT   Port for Ollama to listen on (default: 11435 on WSL, 11434 otherwise)
-#   --model MODEL Model to pull (default: from .env OLLAMA_MODEL, or qwen2.5:7b)
+#   --model MODEL Model to pull (default: from .env OLLAMA_MODEL, or qwen3:7b)
 #   --force       Reinstall even if Ollama is already installed
 #
 # After install, start Ollama with:
@@ -117,7 +117,7 @@ fi
 if [[ -z "$OLLAMA_MODEL" && -f "$REPO_ROOT/.env" ]]; then
     OLLAMA_MODEL="$(grep -E '^OLLAMA_MODEL=' "$REPO_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 fi
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:7b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:7b}"
 
 OLLAMA_URL="http://localhost:${OLLAMA_PORT}"
 

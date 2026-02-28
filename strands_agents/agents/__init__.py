@@ -49,7 +49,7 @@ def _create_model():
 
         return OllamaModel(
             host=os.environ.get("OLLAMA_HOST", "http://ollama:11434"),
-            model_id=os.environ.get("OLLAMA_MODEL", "qwen2.5:14b"),
+            model_id=os.environ.get("OLLAMA_MODEL", "qwen3:14b"),
             max_tokens=1024,
         )
     else:

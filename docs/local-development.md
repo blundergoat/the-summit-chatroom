@@ -14,7 +14,7 @@ docker compose up --build
 # Open http://localhost:8082
 ```
 
-First run pulls the LLM model (~9GB for qwen2.5:14b) — this takes a few minutes.
+First run pulls the LLM model (~9GB for qwen3:14b) — this takes a few minutes.
 
 ### Option B: Bare-metal (recommended for development)
 
@@ -40,13 +40,6 @@ Runs PHP and Python directly. Faster iteration, no container rebuilds.
 - Python 3.12+
 - pip3
 - Ollama installed locally (https://ollama.com)
-- The `strands-php-client` repo cloned as a sibling directory:
-
-```
-projects/
-├── the-summit-chatroom/         # This repo
-└── strands-php-client/        # Required — local Composer path dependency
-```
 
 ## Architecture
 
@@ -109,7 +102,7 @@ No credentials needed. The model runs on your machine.
 
 ```env
 MODEL_PROVIDER=ollama
-OLLAMA_MODEL=qwen2.5:14b
+OLLAMA_MODEL=qwen3:14b
 ```
 
 #### AWS Bedrock (cloud)
@@ -133,7 +126,7 @@ Edit `.env`:
 OLLAMA_MODEL=mistral
 ```
 
-Good options: `qwen2.5:14b` (default, 9GB), `mistral` (4GB), `llama3.1` (4.7GB), `gemma2` (5.4GB).
+Good options: `qwen3:14b` (default, 9GB), `mistral` (4GB), `llama3.1` (4.7GB), `gemma2` (5.4GB).
 
 Smaller models are faster but produce lower quality council debates. The 14b parameter model is a good balance for machines with 16GB+ RAM.
 
@@ -163,7 +156,7 @@ ollama pull mistral
 |-------|------|-----------|----------|-------|
 | mistral (7B) | ~4GB | 8GB | 8GB | Fast |
 | llama3.1 (8B) | ~4.7GB | 8GB | 8GB | Fast |
-| qwen2.5:14b | ~9GB | 16GB | 16GB | Moderate |
+| qwen3:14b | ~9GB | 16GB | 16GB | Moderate |
 | llama3.1:70b | ~40GB | 64GB | 48GB | Slow |
 
 CPU inference works but is significantly slower. A GPU with sufficient VRAM is recommended.
@@ -250,17 +243,6 @@ Streaming is automatically enabled when Mercure is available (Docker Compose) an
 
 ## Troubleshooting
 
-### "strands-php-client not found"
-
-The PHP app depends on the `strands-php-client` package via a Composer path repository. Clone it as a sibling directory:
-
-```bash
-cd ..
-git clone https://github.com/blundergoat/strands-php-client.git
-cd the-summit-chatroom
-composer install
-```
-
 ### "Address already in use" on start
 
 Another process is using port 8081 or 8082. Check what's running:
@@ -281,15 +263,6 @@ AGENT_PORT=9081 APP_PORT=9082 ./scripts/start-dev.sh
 - Try a smaller model: `OLLAMA_MODEL=mistral ./scripts/start-dev.sh`
 - CPU-only inference for 14B models takes 30-60 seconds per agent response
 
-### Docker build fails at "strands-php-client"
-
-The `docker-compose.yml` uses `additional_contexts` to access the sibling directory. Make sure the directory exists:
-
-```bash
-ls ../strands-php-client/composer.json    # Should exist
-docker compose up --build
-```
-
 ### Agent returns errors about model not found
 
 The Ollama model hasn't been pulled yet:
@@ -299,7 +272,7 @@ The Ollama model hasn't been pulled yet:
 ollama list
 
 # Pull the configured model
-ollama pull qwen2.5:14b
+ollama pull qwen3:14b
 ```
 
 ### Python agent won't start (bare-metal)

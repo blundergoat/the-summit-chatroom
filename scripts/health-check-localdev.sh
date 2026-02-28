@@ -6,18 +6,18 @@
 #
 # Checks the health of all services started by start-dev.sh or docker compose:
 #   - Ollama API (port 11434)
-#   - Python FastAPI agent (port 8081)
-#   - PHP Symfony app (port 8082)
-#   - Mercure hub (port 3701) - optional, via docker compose or start-dev.sh
+#   - Python FastAPI agent (port 8093)
+#   - PHP Symfony app (port 8094)
+#   - Mercure hub (port 3712) - optional, via docker compose or start-dev.sh
 #
 # Also checks LLM model availability, endpoint connectivity between services,
 # and response times.
 #
 # Environment (matches start-dev.sh defaults):
-#   AGENT_PORT   - Python agent port (default: 8081)
-#   APP_PORT     - PHP app port (default: 8082)
+#   AGENT_PORT   - Python agent port (default: 8093)
+#   APP_PORT     - PHP app port (default: 8094)
 #   OLLAMA_HOST  - Ollama URL (default: http://localhost:11434)
-#   MERCURE_PORT - Mercure port (default: 3701)
+#   MERCURE_PORT - Mercure port (default: 3712)
 #
 # Exit codes:
 #   0 - All required services healthy
@@ -29,17 +29,17 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ── Configurable endpoints ──────────────────────────────────────────
-AGENT_PORT="${AGENT_PORT:-8081}"
-APP_PORT="${APP_PORT:-8082}"
+AGENT_PORT="${AGENT_PORT:-8093}"
+APP_PORT="${APP_PORT:-8094}"
 OLLAMA_HOST="${OLLAMA_HOST:-http://localhost:11434}"
-MERCURE_PORT="${MERCURE_PORT:-3701}"
+MERCURE_PORT="${MERCURE_PORT:-3712}"
 
 # ── Load model name from .env ───────────────────────────────────────
 if [[ -f "$REPO_ROOT/.env" ]]; then
     OLLAMA_MODEL="${OLLAMA_MODEL:-$(grep -E '^OLLAMA_MODEL=' "$REPO_ROOT/.env" 2>/dev/null | cut -d= -f2)}"
     MODEL_PROVIDER="${MODEL_PROVIDER:-$(grep -E '^MODEL_PROVIDER=' "$REPO_ROOT/.env" 2>/dev/null | cut -d= -f2)}"
 fi
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:14b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:14b}"
 MODEL_PROVIDER="${MODEL_PROVIDER:-ollama}"
 
 # ── Colors ──────────────────────────────────────────────────────────

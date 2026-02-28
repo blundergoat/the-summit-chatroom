@@ -158,13 +158,6 @@ else
     fail "AGENT_ENDPOINT not set in .env"
 fi
 
-step "strands-php-client (sibling dir)"
-if [[ -f "$REPO_ROOT/../strands-php-client/composer.json" ]]; then
-    pass
-else
-    fail "missing at ../strands-php-client"
-fi
-
 step "docker-compose.yml"
 if [[ -f "$REPO_ROOT/docker-compose.yml" ]]; then
     pass

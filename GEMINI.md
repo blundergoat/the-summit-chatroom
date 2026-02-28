@@ -25,7 +25,7 @@ The system follows a containerized microservices architecture:
     - **Sabotage Engine:** Randomly injects "Secret Objectives" into one agent per round to create comedic contrast and "derail" the debate subtly.
     - **Session Store:** In-memory deduplication of user messages and accumulation of assistant responses to maintain "debate context".
 3.  **Mercure:** Acts as the real-time hub, relaying tokens from the PHP app to the browser.
-4.  **Ollama:** Optional local container for running LLMs (default: `qwen2.5:14b`).
+4.  **Ollama:** Optional local container for running LLMs (default: `qwen3:14b`).
 
 ### Data Flow (Streaming)
 1. Browser POSTs message to `/chat` with a list of 3 selected `personas`.

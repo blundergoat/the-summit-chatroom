@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Streaming\CancellationToken;
 use Psr\Log\LoggerInterface;
 use StrandsPhpClient\Context\AgentContext;
+use StrandsPhpClient\Exceptions\AgentErrorException;
 use StrandsPhpClient\StrandsClient;
 use StrandsPhpClient\Streaming\StreamEvent;
 use StrandsPhpClient\Streaming\StreamEventType;
@@ -45,9 +47,10 @@ class SummitStreamOrchestrator
 {
     public function __construct(
         #[Autowire(service: 'strands.client.summit')]
-        private readonly StrandsClient $client,
+        private readonly StrandsClient $strandsClient,
         private readonly HubInterface $hub,
         private readonly LoggerInterface $logger,
+        private readonly CancellationToken $cancellationToken,
     ) {
     }
 
@@ -76,109 +79,7 @@ class SummitStreamOrchestrator
         ]);
 
         foreach ($personas as $persona) {
-            $personaStartedAt = microtime(true);
-
-            $topic = $topicBase . '/' . $persona;
-
-            $this->publish($topic, [
-                'type' => 'start',
-                'persona' => $persona,
-                'correlation_id' => $correlationId,
-            ]);
-
-            $context = AgentContext::create()
-                ->withMetadata('persona', $persona)
-                ->withMetadata('correlation_id', $correlationId)
-                ->withMetadata('active_personas', $personas);
-
-            $this->logger->info('summit.streaming.persona.started', [
-                'correlation_id' => $correlationId,
-                'session_id' => $sessionId,
-                'persona' => $persona,
-                'topic' => $topic,
-            ]);
-
-            $eventCounts = [
-                'text' => 0,
-                'tool_use' => 0,
-                'tool_result' => 0,
-                'thinking' => 0,
-                'complete' => 0,
-                'error' => 0,
-            ];
-
-            try {
-                $this->client->stream(
-                    message: $message,
-                    onEvent: function (StreamEvent $event) use ($topic, $persona, $correlationId, &$eventCounts) {
-                        $eventCounts[$event->type->value]++;
-
-                        match ($event->type) {
-                            StreamEventType::Text => $this->publish($topic, [
-                                'type' => 'text',
-                                'persona' => $persona,
-                                'content' => $event->text,
-                                'correlation_id' => $correlationId,
-                            ]),
-                            StreamEventType::ToolUse => $this->publish($topic, [
-                                'type' => 'tool_use',
-                                'persona' => $persona,
-                                'tool_name' => $event->toolName,
-                                'correlation_id' => $correlationId,
-                            ]),
-                            StreamEventType::ToolResult => $this->publish($topic, [
-                                'type' => 'tool_result',
-                                'persona' => $persona,
-                                'tool_name' => $event->toolName,
-                                'correlation_id' => $correlationId,
-                            ]),
-                            StreamEventType::Thinking => $this->publish($topic, [
-                                'type' => 'thinking',
-                                'persona' => $persona,
-                                'correlation_id' => $correlationId,
-                            ]),
-                            StreamEventType::Complete => $this->publish($topic, [
-                                'type' => 'complete',
-                                'persona' => $persona,
-                                'correlation_id' => $correlationId,
-                                'has_objective' => $event->hasObjective,
-                            ]),
-                            StreamEventType::Error => $this->publish($topic, [
-                                'type' => 'error',
-                                'persona' => $persona,
-                                'message' => $event->errorMessage,
-                                'correlation_id' => $correlationId,
-                            ]),
-                        };
-                    },
-                    context: $context,
-                    sessionId: $sessionId,
-                );
-
-                $this->logger->info('summit.streaming.persona.completed', [
-                    'correlation_id' => $correlationId,
-                    'session_id' => $sessionId,
-                    'persona' => $persona,
-                    'duration_ms' => (int) round((microtime(true) - $personaStartedAt) * 1000),
-                    'event_counts' => $eventCounts,
-                ]);
-            } catch (\Throwable $e) {
-                $this->logger->error('summit.streaming.persona.failed', [
-                    'correlation_id' => $correlationId,
-                    'session_id' => $sessionId,
-                    'persona' => $persona,
-                    'duration_ms' => (int) round((microtime(true) - $personaStartedAt) * 1000),
-                    'exception_class' => $e::class,
-                    'exception_message' => $e->getMessage(),
-                ]);
-
-                $this->publish($topic, [
-                    'type' => 'error',
-                    'persona' => $persona,
-                    'message' => $e->getMessage(),
-                    'correlation_id' => $correlationId,
-                ]);
-            }
+            $this->streamPersona($message, $sessionId, $topicBase, $persona, $correlationId, $personas);
         }
 
         $this->publish($topicBase . '/done', [
@@ -192,6 +93,152 @@ class SummitStreamOrchestrator
             'topic_base' => $topicBase,
             'duration_ms' => (int) round((microtime(true) - $streamStartedAt) * 1000),
         ]);
+    }
+
+    /**
+     * Stream a single persona and publish events to Mercure.
+     *
+     * @param string[] $allPersonas Ordered list of all active personas (for metadata)
+     */
+    private function streamPersona(
+        string $message,
+        string $sessionId,
+        string $topicBase,
+        string $persona,
+        string $correlationId,
+        array $allPersonas,
+    ): void {
+        $personaStartedAt = microtime(true);
+        $topic = $topicBase . '/' . $persona;
+
+        $this->publish($topic, [
+            'type' => 'start',
+            'persona' => $persona,
+            'correlation_id' => $correlationId,
+        ]);
+
+        // Cross-runtime metadata contract with strands_agents/api/server.py.
+        // These keys are read directly by Python endpoints; renaming them on one side
+        // without the other silently breaks persona/objective routing.
+        $context = AgentContext::create()
+            ->withMetadata('persona', $persona)
+            ->withMetadata('correlation_id', $correlationId)
+            ->withMetadata('active_personas', $allPersonas);
+
+        $this->logger->info('summit.streaming.persona.started', [
+            'correlation_id' => $correlationId,
+            'session_id' => $sessionId,
+            'persona' => $persona,
+            'topic' => $topic,
+        ]);
+
+        $eventCounts = [
+            'text' => 0,
+            'tool_use' => 0,
+            'tool_result' => 0,
+            'thinking' => 0,
+            'complete' => 0,
+            'error' => 0,
+        ];
+
+        try {
+            $result = $this->strandsClient->stream(
+                message: $message,
+                onEvent: function (StreamEvent $event) use ($topic, $persona, $correlationId, &$eventCounts): ?bool {
+                    if ($this->cancellationToken->isCancelled($topic)) {
+                        $this->publish($topic, [
+                            'type' => 'cancelled',
+                            'persona' => $persona,
+                            'correlation_id' => $correlationId,
+                        ]);
+
+                        return false;
+                    }
+
+                    $eventCounts[$event->type->value]++;
+
+                    match ($event->type) {
+                        StreamEventType::Text => $this->publish($topic, [
+                            'type' => 'text',
+                            'persona' => $persona,
+                            'content' => $event->text,
+                            'correlation_id' => $correlationId,
+                        ]),
+                        StreamEventType::ToolUse => $this->publish($topic, [
+                            'type' => 'tool_use',
+                            'persona' => $persona,
+                            'tool_name' => $event->toolName,
+                            'correlation_id' => $correlationId,
+                        ]),
+                        StreamEventType::ToolResult => $this->publish($topic, [
+                            'type' => 'tool_result',
+                            'persona' => $persona,
+                            'tool_name' => $event->toolName,
+                            'correlation_id' => $correlationId,
+                        ]),
+                        StreamEventType::Thinking => $this->publish($topic, [
+                            'type' => 'thinking',
+                            'persona' => $persona,
+                            'correlation_id' => $correlationId,
+                        ]),
+                        StreamEventType::Complete => $this->publish($topic, [
+                            'type' => 'complete',
+                            'persona' => $persona,
+                            'correlation_id' => $correlationId,
+                            'has_objective' => $event->hasObjective,
+                        ]),
+                        StreamEventType::Error => $this->publish($topic, [
+                            'type' => 'error',
+                            'persona' => $persona,
+                            'message' => $event->errorMessage,
+                            'correlation_id' => $correlationId,
+                        ]),
+                        StreamEventType::Citation,
+                        StreamEventType::ReasoningSignature,
+                        StreamEventType::ReasoningRedacted => null,
+                    };
+
+                    return null;
+                },
+                context: $context,
+                sessionId: $sessionId,
+            );
+
+            $this->logger->info('summit.streaming.persona.completed', [
+                'correlation_id' => $correlationId,
+                'session_id' => $sessionId,
+                'persona' => $persona,
+                'duration_ms' => (int) round((microtime(true) - $personaStartedAt) * 1000),
+                'event_counts' => $eventCounts,
+                'input_tokens' => $result->usage->inputTokens,
+                'output_tokens' => $result->usage->outputTokens,
+                'stop_reason' => $result->stopReason?->value,
+                'tools_used' => count($result->toolsUsed),
+            ]);
+        } catch (\Throwable $e) {
+            $errorContext = [
+                'correlation_id' => $correlationId,
+                'session_id' => $sessionId,
+                'persona' => $persona,
+                'duration_ms' => (int) round((microtime(true) - $personaStartedAt) * 1000),
+                'exception_class' => $e::class,
+                'exception_message' => $e->getMessage(),
+            ];
+
+            if ($e instanceof AgentErrorException) {
+                $errorContext['status_code'] = $e->statusCode;
+                $errorContext['response_body'] = $e->responseBody;
+            }
+
+            $this->logger->error('summit.streaming.persona.failed', $errorContext);
+
+            $this->publish($topic, [
+                'type' => 'error',
+                'persona' => $persona,
+                'message' => $e->getMessage(),
+                'correlation_id' => $correlationId,
+            ]);
+        }
     }
 
     /**

@@ -68,7 +68,7 @@ services:
     depends_on:
       ollama:
         condition: service_healthy   # Wait for Ollama to be ready before pulling
-    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:14b}"]  # Default model: qwen2.5:14b
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen3:14b}"]  # Default model: qwen3:14b
     environment:
       - OLLAMA_HOST=http://ollama:11434   # Tell the CLI where the Ollama server is
     restart: "no"   # Run once and exit — don't restart
@@ -102,7 +102,7 @@ services:
 
       # --- Ollama settings (used when MODEL_PROVIDER=ollama) ---
       - OLLAMA_HOST=http://ollama:11434   # Docker internal hostname
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:14b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:14b}
 
       # --- Bedrock settings (used when MODEL_PROVIDER=bedrock) ---
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
@@ -125,15 +125,10 @@ services:
   # The web application that serves the chat UI and orchestrates the summit.
   # Built from the Dockerfile in the project root.
   #
-  # The "additional_contexts" section lets Docker access the sibling strands-php-client
-  # directory during the build. This is needed because the PHP app depends on
-  # strands-php-client via a Composer path repository (for local development).
   app:
     build:
       context: .                    # Build context is the project root
       dockerfile: Dockerfile
-      additional_contexts:
-        strands-php-client: ../strands-php-client   # Sibling library needed by Composer
     ports:
       - "8082:8080"       # The chat UI — open http://localhost:8082 in your browser
     environment:
