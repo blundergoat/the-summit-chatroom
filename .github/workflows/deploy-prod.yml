@@ -36,7 +36,7 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   ECR_REPOSITORY: the-summit-agent
   ECS_CLUSTER: the-summit-cluster
-  ECS_SERVICE: the-summit-agent
+  ECS_SERVICE: the-summit-app
   AGENT_TASK_FAMILY: the-summit-agent
 
 jobs:
