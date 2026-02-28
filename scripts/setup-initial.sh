@@ -116,13 +116,6 @@ else
     fail "not found"
 fi
 
-step "strands-php-client (sibling dir)"
-if [[ -f "$REPO_ROOT/../strands-php-client/composer.json" ]]; then
-    pass "found"
-else
-    fail "not found at ../strands-php-client - required by composer.json path repo"
-fi
-
 if [[ $ERRORS -gt 0 ]]; then
     echo ""
     echo -e "  ${RED}${BOLD}Cannot continue - ${ERRORS} prerequisite(s) missing${RESET}"
@@ -178,6 +171,31 @@ else
     fail "pip install failed"
 fi
 
+# ── Ollama model ──────────────────────────────────────────────────
+echo ""
+echo -e "  ${BOLD}Pulling Ollama model${RESET}"
+echo ""
+
+# Read OLLAMA_MODEL from .env, fall back to default
+OLLAMA_MODEL="$(grep -E '^OLLAMA_MODEL=' "$REPO_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:14b}"
+
+step "Ollama installed"
+if command -v ollama &>/dev/null; then
+    pass
+else
+    fail "not found — install from https://ollama.com"
+fi
+
+if [[ $ERRORS -eq 0 ]]; then
+    step "Pull ${OLLAMA_MODEL}"
+    if ollama pull "$OLLAMA_MODEL" >/dev/null 2>&1; then
+        pass "pulled"
+    else
+        fail "ollama pull failed"
+    fi
+fi
+
 # ── Summary ────────────────────────────────────────────────────────
 echo ""
 echo -e "  ${DIM}$(printf '─%.0s' {1..44})${RESET}"
@@ -187,8 +205,8 @@ if [[ $ERRORS -eq 0 ]]; then
     echo -e "  ${GREEN}${BOLD}Setup complete!${RESET}"
     echo ""
     echo -e "  ${DIM}Next steps:${RESET}"
-    echo -e "    ${ARROW} Run quality checks:     ${BOLD}composer preflight${RESET}"
-    echo -e "    ${ARROW} Start full stack:        ${BOLD}docker compose up --build${RESET}"
+    echo -e "    ${ARROW} Run quality checks:     ${BOLD}scripts/preflight-checks.sh${RESET}"
+    echo -e "    ${ARROW} Start dev server:        ${BOLD}scripts/start-dev.sh${RESET}"
     echo -e "    ${ARROW} Python venv is at:       ${DIM}strands_agents/.venv${RESET}"
     echo ""
 else

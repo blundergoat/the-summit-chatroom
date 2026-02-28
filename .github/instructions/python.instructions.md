@@ -83,7 +83,7 @@ Changes to these Pydantic models MUST be coordinated with the PHP `StrandsClient
 | `MODEL_PROVIDER` | `ollama` | `agents/__init__.py` |
 | `MODEL_ID` | `us.anthropic.claude-sonnet-4-20250514-v1:0` | Bedrock model selection |
 | `OLLAMA_HOST` | `http://ollama:11434` | Ollama connection |
-| `OLLAMA_MODEL` | `qwen2.5:14b` | Ollama model selection |
+| `OLLAMA_MODEL` | `qwen3:14b` | Ollama model selection |
 | `AWS_DEFAULT_REGION` | `ap-southeast-2` | Bedrock region |
 
 ## Validation

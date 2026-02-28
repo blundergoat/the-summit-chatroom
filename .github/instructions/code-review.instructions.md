@@ -15,7 +15,7 @@ You are reviewing a multi-agent chat application with a PHP/Symfony backend, Pyt
 - Python 3.12+, FastAPI + Pydantic for request/response validation
 - Real-time streaming via Mercure (JWT-authenticated SSE)
 - Two execution modes: sync (blocking JSON) and streaming (Mercure SSE)
-- `blundergoat/strands-client` is a local path dependency at `../strands-php-client`
+- `blundergoat/strands-php-client` is a Packagist dependency (no local clone needed)
 - 10 comedy personas defined in `strands_agents/agents/multi_persona_chat.py`, 3 randomly selected per session
 - Secret objectives system in `strands_agents/persona_objectives.py`
 

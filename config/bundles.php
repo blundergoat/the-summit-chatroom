@@ -8,7 +8,7 @@
  *   FrameworkBundle - Core Symfony framework (routing, DI container, HTTP handling, etc.)
  *   TwigBundle     - Twig template engine for rendering HTML views
  *   StrandsBundle  - Registers StrandsClient services from config/packages/strands.yaml
- *                    (this lives inside strands-php-client, not a separate package)
+ *                    (provided by the blundergoat/strands-php-client Composer package)
  *   MercureBundle  - Mercure real-time messaging support (Server-Sent Events hub)
  *
  * The ['all' => true] means the bundle is enabled in ALL environments (dev, prod, test).

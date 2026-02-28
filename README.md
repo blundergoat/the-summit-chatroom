@@ -36,7 +36,7 @@ docker compose up --build
 
 Open http://localhost:8082 and ask a question.
 
-First run downloads the LLM model (~9GB for `qwen2.5:14b`). Subsequent starts are fast.
+First run downloads the LLM model (~9GB for `qwen3:14b`). Subsequent starts are fast.
 
 ### Bare-metal (for development)
 
@@ -84,7 +84,7 @@ Defaults to **Ollama** (local, free). Switch to **AWS Bedrock** by editing `.env
 ```env
 # Local (default)
 MODEL_PROVIDER=ollama
-OLLAMA_MODEL=qwen2.5:14b
+OLLAMA_MODEL=qwen3:14b
 
 # AWS Bedrock
 MODEL_PROVIDER=bedrock

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service;
 
 use App\Service\SummitStreamOrchestrator;
+use App\Streaming\CancellationToken;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use StrandsPhpClient\Response\Usage;
 use StrandsPhpClient\StrandsClient;
 use StrandsPhpClient\Streaming\StreamEvent;
 use StrandsPhpClient\Streaming\StreamEventType;
+use StrandsPhpClient\Streaming\StreamResult;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -23,17 +26,22 @@ use Symfony\Component\Mercure\Update;
  *   - All event types are handled
  *   - Exceptions during streaming are caught and published as error events
  *   - All personas are streamed in order
+ *   - StreamResult usage data is logged
+ *   - Cancellation aborts the stream
  */
 class SummitStreamOrchestratorTest extends TestCase
 {
     /** @var StrandsClient&MockObject */
-    private StrandsClient&MockObject $client;
+    private StrandsClient&MockObject $strandsClient;
 
     /** @var HubInterface&MockObject */
     private HubInterface&MockObject $hub;
 
     /** @var LoggerInterface&MockObject */
     private LoggerInterface&MockObject $logger;
+
+    /** @var CancellationToken&MockObject */
+    private CancellationToken&MockObject $cancellationToken;
 
     private SummitStreamOrchestrator $orchestrator;
 
@@ -42,20 +50,25 @@ class SummitStreamOrchestratorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->client = $this->createMock(StrandsClient::class);
+        $this->strandsClient = $this->createMock(StrandsClient::class);
         $this->hub = $this->createMock(HubInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->cancellationToken = $this->createMock(CancellationToken::class);
+        $this->cancellationToken->method('isCancelled')->willReturn(false);
 
         $this->orchestrator = new SummitStreamOrchestrator(
-            $this->client,
+            $this->strandsClient,
             $this->hub,
             $this->logger,
+            $this->cancellationToken,
         );
     }
 
     public function testDeliberateStreamingPublishesStartAndDoneEvents(): void
     {
-        $this->client->method('stream');
+        $this->strandsClient->method('stream')->willReturn(
+            new StreamResult(text: '', usage: new Usage()),
+        );
 
         $published = [];
         $this->hub
@@ -83,7 +96,7 @@ class SummitStreamOrchestratorTest extends TestCase
     public function testDeliberateStreamingPublishesTextEvents(): void
     {
         $callCount = 0;
-        $this->client
+        $this->strandsClient
             ->method('stream')
             ->willReturnCallback(function (string $message, callable $onEvent) use (&$callCount) {
                 if ($callCount === 0) {
@@ -93,6 +106,8 @@ class SummitStreamOrchestratorTest extends TestCase
                     ));
                 }
                 $callCount++;
+
+                return new StreamResult(text: 'Hello from gandalf', usage: new Usage());
             });
 
         $published = [];
@@ -116,7 +131,7 @@ class SummitStreamOrchestratorTest extends TestCase
     public function testDeliberateStreamingPublishesAllEventTypes(): void
     {
         $callCount = 0;
-        $this->client
+        $this->strandsClient
             ->method('stream')
             ->willReturnCallback(function (string $message, callable $onEvent) use (&$callCount) {
                 if ($callCount === 0) {
@@ -127,6 +142,8 @@ class SummitStreamOrchestratorTest extends TestCase
                     $onEvent(new StreamEvent(type: StreamEventType::Complete));
                 }
                 $callCount++;
+
+                return new StreamResult(text: 'result', usage: new Usage());
             });
 
         $published = [];
@@ -151,13 +168,15 @@ class SummitStreamOrchestratorTest extends TestCase
     public function testDeliberateStreamingPublishesErrorOnStreamException(): void
     {
         $callCount = 0;
-        $this->client
+        $this->strandsClient
             ->method('stream')
             ->willReturnCallback(function () use (&$callCount) {
                 $callCount++;
                 if ($callCount === 1) {
                     throw new \RuntimeException('Connection lost');
                 }
+
+                return new StreamResult(text: '', usage: new Usage());
             });
 
         $published = [];
@@ -187,7 +206,7 @@ class SummitStreamOrchestratorTest extends TestCase
     public function testDeliberateStreamingPublishesErrorEventFromStream(): void
     {
         $callCount = 0;
-        $this->client
+        $this->strandsClient
             ->method('stream')
             ->willReturnCallback(function (string $message, callable $onEvent) use (&$callCount) {
                 if ($callCount === 0) {
@@ -197,6 +216,8 @@ class SummitStreamOrchestratorTest extends TestCase
                     ));
                 }
                 $callCount++;
+
+                return new StreamResult(text: '', usage: new Usage());
             });
 
         $published = [];
@@ -220,10 +241,12 @@ class SummitStreamOrchestratorTest extends TestCase
     {
         $streamedPersonas = [];
 
-        $this->client
+        $this->strandsClient
             ->method('stream')
             ->willReturnCallback(function (string $message, callable $onEvent, $context) use (&$streamedPersonas) {
                 $streamedPersonas[] = $context->toArray()['metadata']['persona'];
+
+                return new StreamResult(text: '', usage: new Usage());
             });
 
         $this->hub->method('publish')->willReturn('id');
@@ -231,5 +254,73 @@ class SummitStreamOrchestratorTest extends TestCase
         $this->orchestrator->deliberateStreaming('Hi', 'sess-1', 'topic', $this->personas);
 
         $this->assertSame(['gandalf', 'terminator', 'ships_cat'], $streamedPersonas);
+    }
+
+    public function testDeliberateStreamingLogsStreamResultUsageData(): void
+    {
+        $this->strandsClient
+            ->method('stream')
+            ->willReturnCallback(function (string $message, callable $onEvent) {
+                return new StreamResult(
+                    text: 'response',
+                    usage: new Usage(inputTokens: 150, outputTokens: 75),
+                    toolsUsed: [['name' => 'search']],
+                );
+            });
+
+        $logEntries = [];
+        $this->logger
+            ->method('info')
+            ->willReturnCallback(function (string $message, array $context) use (&$logEntries) {
+                $logEntries[] = ['message' => $message, 'context' => $context];
+            });
+
+        $this->hub->method('publish')->willReturn('id');
+
+        $this->orchestrator->deliberateStreaming('Hi', 'sess-1', 'topic', ['gandalf']);
+
+        $completedLogs = array_filter($logEntries, fn ($e) => $e['message'] === 'summit.streaming.persona.completed');
+        $this->assertNotEmpty($completedLogs);
+
+        $log = array_values($completedLogs)[0]['context'];
+        $this->assertSame(150, $log['input_tokens']);
+        $this->assertSame(75, $log['output_tokens']);
+        $this->assertSame(1, $log['tools_used']);
+    }
+
+    public function testDeliberateStreamingAbortOnCancellation(): void
+    {
+        $cancellationToken = $this->createMock(CancellationToken::class);
+        $cancellationToken->method('isCancelled')->willReturn(true);
+
+        $orchestrator = new SummitStreamOrchestrator(
+            $this->strandsClient,
+            $this->hub,
+            $this->logger,
+            $cancellationToken,
+        );
+
+        $this->strandsClient
+            ->method('stream')
+            ->willReturnCallback(function (string $message, callable $onEvent) {
+                $result = $onEvent(new StreamEvent(type: StreamEventType::Text, text: 'Hello'));
+                $this->assertFalse($result);
+
+                return new StreamResult(text: '', usage: new Usage());
+            });
+
+        $published = [];
+        $this->hub
+            ->method('publish')
+            ->willReturnCallback(function (Update $update) use (&$published) {
+                $published[] = json_decode($update->getData(), true);
+
+                return 'id';
+            });
+
+        $orchestrator->deliberateStreaming('Hi', 'sess-1', 'topic', ['gandalf']);
+
+        $cancelledEvents = array_filter($published, fn ($e) => ($e['type'] ?? '') === 'cancelled');
+        $this->assertNotEmpty($cancelledEvents);
     }
 }

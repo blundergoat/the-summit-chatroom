@@ -23,7 +23,7 @@ General principles for AI agents working in this codebase.
 - **Namespace**: `App\` for src/, `App\Tests\` for tests/
 - **Python agent**: FastAPI + Strands SDK in `strands_agents/`, Python 3.12+
 - **Frontend**: Single Twig template (`templates/chatroom.html.twig`) with inline JS
-- **Local dependency**: `blundergoat/strands-client` is a path dependency at `../strands-php-client`
+- **Packagist dependency**: `blundergoat/strands-php-client` is installed via Composer from Packagist
 
 ## Architecture
 

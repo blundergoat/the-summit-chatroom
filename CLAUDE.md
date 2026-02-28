@@ -52,16 +52,11 @@ docker compose up --build              # Build and start all 5 services
 ```
 Browser (Twig UI :8082)
   → ChatController (POST /chat)
-    → SummitOrchestrator (sync) or SummitStreamOrchestrator (streaming)
+    → SummitStreamOrchestrator (streaming via kernel.terminate)
       → Python FastAPI agent (:8000) with persona metadata
         → Ollama (:11434) or AWS Bedrock
-      ← Responses streamed back via Mercure (:3701) in streaming mode
+      ← Responses streamed back via Mercure (:3701)
 ```
-
-### Two Execution Modes
-
-- **Sync**: `SummitOrchestrator::deliberate()` calls all 3 agents sequentially, blocks until complete, returns JSON
-- **Streaming**: `SummitStreamOrchestrator::deliberateStreaming()` runs after HTTP response via `kernel.terminate` event, publishes tokens to Mercure topics in real-time
 
 ### The Summit Pattern
 
@@ -73,9 +68,9 @@ A single `StrandsClient` is injected via `#[Autowire(service: 'strands.client.su
 
 ### Key Components
 
-- **PHP layer** (`src/`): PSR-4 namespace `App\`, Symfony 6.4. `ChatController` routes requests, `SummitOrchestrator` and `SummitStreamOrchestrator` manage agent sequencing
+- **PHP layer** (`src/`): PSR-4 namespace `App\`, Symfony 6.4. `ChatController` routes requests, `SummitStreamOrchestrator` manages agent sequencing, `CancellationToken` enables stream cancellation
 - **Python agent** (`strands_agents/`): FastAPI with Strands SDK. `agents/multi_persona_chat.py` defines 10 persona system prompts, `api/server.py` is the HTTP layer, `session.py` has in-memory conversation history, `persona_objectives.py` handles secret objective injection
-- **Frontend** (`templates/chatroom.html.twig`): Single Twig template with inline JS for both fetch (sync) and EventSource (streaming)
+- **Frontend** (`templates/chatroom.html.twig`): Single Twig template with inline JS using EventSource (streaming)
 - **Infrastructure** (`infra/terraform/`): AWS deployment — ECS Fargate, ALB, WAF, Route53, DynamoDB, ECR
 
 ### Docker Services (docker-compose.yml)

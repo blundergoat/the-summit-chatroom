@@ -39,14 +39,9 @@ class StrandsServiceWiringTest extends TestCase
         $controller = $container->get(ChatController::class);
         $this->assertInstanceOf(ChatController::class, $controller);
 
-        $syncOrchestrator = $this->readPrivateProperty($controller, 'orchestrator');
-        $this->assertNotNull($syncOrchestrator);
-        $client = $this->readPrivateProperty($syncOrchestrator, 'client');
-        $this->assertInstanceOf(StrandsClient::class, $client);
-
         $streamOrchestrator = $this->readPrivateProperty($controller, 'streamOrchestrator');
         $this->assertNotNull($streamOrchestrator);
-        $streamClient = $this->readPrivateProperty($streamOrchestrator, 'client');
+        $streamClient = $this->readPrivateProperty($streamOrchestrator, 'strandsClient');
         $this->assertInstanceOf(StrandsClient::class, $streamClient);
     }
 

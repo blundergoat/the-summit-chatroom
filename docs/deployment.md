@@ -7,8 +7,6 @@ This document covers the two deployment scripts used to provision and deploy The
 - **AWS CLI** configured with the `aws_devgoat` SSO profile
 - **Terraform** installed ([install guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
 - **Docker** running locally
-- **strands-php-client** cloned as a sibling directory (`../strands-php-client`) — required for the app image build
-
 If your AWS session has expired, re-authenticate first:
 
 ```bash
@@ -196,7 +194,7 @@ graph LR
 3. **Authenticates to ECR** — runs `aws ecr get-login-password` and pipes it to `docker login`
 4. **Builds Docker images**:
    - **Agent**: built from `strands_agents/Dockerfile` with context `strands_agents/`
-   - **App**: built from the project root `Dockerfile`, with `--build-context strands-php-client=../strands-php-client` to include the local path dependency
+   - **App**: built from the project root `Dockerfile`
 5. **Pushes images to ECR** with the configured tag
 6. **Forces ECS redeployment** — calls `aws ecs update-service --force-new-deployment` on the `the-summit-app` service to roll out the new images
 

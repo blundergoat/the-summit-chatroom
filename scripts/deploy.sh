@@ -15,7 +15,6 @@
 #   - AWS CLI configured with correct profile
 #   - Docker running
 #   - Terraform applied (ECR repos must exist)
-#   - strands-php-client sibling directory (for app image)
 #
 # =============================================================================
 
@@ -99,15 +98,9 @@ fi
 
 # Build and push app image
 if [[ "$TARGET" == "all" || "$TARGET" == "app" ]]; then
-    STRANDS_CLIENT="$PROJECT_ROOT/../strands-php-client"
-    if [[ ! -d "$STRANDS_CLIENT" ]]; then
-        error "strands-php-client not found at $STRANDS_CLIENT. It must be a sibling directory."
-    fi
-
     log ""
     log "${BOLD}Building app image...${NC}"
     docker build \
-        --build-context strands-php-client="$STRANDS_CLIENT" \
         -t "${APP_REPO}:${IMAGE_TAG}" \
         -f "$PROJECT_ROOT/Dockerfile" \
         "$PROJECT_ROOT"
