@@ -45,7 +45,7 @@ First run downloads the LLM model (~9GB for `qwen3:14b`). Subsequent starts are 
 ./scripts/start-dev.sh
 ```
 
-Open http://localhost:8082. See [docs/local-development.md](docs/local-development.md) for details.
+Open http://localhost:8082. `setup-initial.sh` now bootstraps common missing prerequisites on supported systems before installing project dependencies. See [docs/local-development.md](docs/local-development.md) for details.
 
 ## Requirements
 

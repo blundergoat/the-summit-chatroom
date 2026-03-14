@@ -21,7 +21,7 @@ First run pulls the LLM model (~9GB for qwen3:14b) — this takes a few minutes.
 Runs PHP and Python directly. Faster iteration, no container rebuilds.
 
 ```bash
-./scripts/setup-initial.sh    # Install all dependencies
+./scripts/setup-initial.sh    # Bootstrap prerequisites + install dependencies
 ./scripts/start-dev.sh        # Start PHP + Python + Ollama
 # Open http://localhost:8082
 ```
@@ -38,8 +38,8 @@ Runs PHP and Python directly. Faster iteration, no container rebuilds.
 - PHP 8.2+
 - Composer
 - Python 3.12+
-- pip3
-- Ollama installed locally (https://ollama.com)
+- package manager access if `setup-initial.sh` needs to install missing tools
+- Ollama installed locally, or let `setup-initial.sh` install it when `MODEL_PROVIDER=ollama`
 
 ## Architecture
 
@@ -182,7 +182,7 @@ All scripts are in the `scripts/` directory.
 
 | Script | Purpose |
 |--------|---------|
-| `setup-initial.sh` | First-time setup: checks prerequisites, copies `.env`, runs `composer install`, creates Python venv, installs pip dependencies |
+| `setup-initial.sh` | First-time setup: bootstraps common missing prerequisites, copies `.env`, runs `composer install`, creates a Python venv, installs pip dependencies, prepares Ollama for local mode |
 | `setup-verify.sh` | Verifies the environment: system tools, project files, PHP/Python dependencies, dev tools, runs PHPUnit + PHPStan + CS check |
 
 ### Running
