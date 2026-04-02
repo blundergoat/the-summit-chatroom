@@ -43,3 +43,6 @@ docker-compose.override.yml
 !*.tfvars.example
 backend.hcl
 crash.log
+
+node_modules
+
